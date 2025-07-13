@@ -1,0 +1,20 @@
+{
+  "name": "hecras-mcp-server",
+  "version": "0.1.0",
+  "description": "MCP server for querying HEC-RAS project information",
+  "main": "server.py",
+  "scripts": {
+    "start": "python server.py"
+  },
+  "mcp": {
+    "server": {
+      "command": "python",
+      "args": ["server.py"]
+    }
+  },
+  "dependencies": {
+    "mcp": "*",
+    "ras-commander": "*",
+    "pandas": "*"
+  }
+}
