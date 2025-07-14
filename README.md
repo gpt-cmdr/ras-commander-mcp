@@ -12,7 +12,7 @@ An MCP (Model Context Protocol) server that provides tools for querying HEC-RAS 
 
 ## Prerequisites
 
-1. **HEC-RAS Installation**: HEC-RAS must be installed on your system
+1. **HEC-RAS Installation**: HEC-RAS must be installed on your system (default expects version 6.6)
 2. **Python**: Python 3.8+ with Anaconda recommended
 3. **Claude Desktop**: For MCP integration
 
@@ -56,6 +56,45 @@ Add the following to your Claude Desktop configuration file (`claude_desktop_con
 
 Adjust the paths to match your installation.
 
+### HEC-RAS Version Configuration
+
+The MCP server uses HEC-RAS version 6.6 by default. This version is NOT passed directly in tool calls but is configured at the server level. To use a different version of HEC-RAS:
+
+1. **Set HEC-RAS Version** (if you have a different version installed):
+   ```json
+   {
+     "mcpServers": {
+       "hecras": {
+         "command": "C:\\Users\\billk\\anaconda3\\envs\\claude_test_env\\python.exe",
+         "args": ["C:\\GH\\ras-commander-mcp\\server.py"],
+         "env": {
+           "HECRAS_VERSION": "6.5"
+         }
+       }
+     }
+   }
+   ```
+
+2. **Set HEC-RAS Path** (if HEC-RAS is installed in a non-standard location):
+   ```json
+   {
+     "mcpServers": {
+       "hecras": {
+         "command": "C:\\Users\\billk\\anaconda3\\envs\\claude_test_env\\python.exe",
+         "args": ["C:\\GH\\ras-commander-mcp\\server.py"],
+         "env": {
+           "HECRAS_PATH": "C:\\Program Files\\HEC\\HEC-RAS\\6.5\\HEC-RAS.exe"
+         }
+       }
+     }
+   }
+   ```
+
+**Important**: If you encounter errors about HEC-RAS not being found, ensure that:
+- HEC-RAS 6.6 is installed in the default location, OR
+- Change the configuration to match your installed HEC-RAS version using the `HECRAS_VERSION` environment variable, OR
+- Specify the full path to your HEC-RAS executable using the `HECRAS_PATH` environment variable
+
 ## Usage
 
 ### Available Tools
@@ -63,18 +102,36 @@ Adjust the paths to match your installation.
 1. **query_hecras_project**: Get comprehensive project information
    - Parameters:
      - `project_path` (required): Full path to HEC-RAS project folder
-     - `ras_version` (optional): HEC-RAS version (default: "6.6")
      - `include_boundaries` (optional): Include boundary conditions (default: false)
 
 2. **get_hecras_plans**: Get only plan information
    - Parameters:
      - `project_path` (required): Full path to HEC-RAS project folder
-     - `ras_version` (optional): HEC-RAS version (default: "6.6")
 
 3. **get_hecras_geometries**: Get only geometry information
    - Parameters:
      - `project_path` (required): Full path to HEC-RAS project folder
-     - `ras_version` (optional): HEC-RAS version (default: "6.6")
+
+4. **get_infiltration_data**: Get infiltration layer data and soil statistics
+   - Parameters:
+     - `project_path` (required): Full path to HEC-RAS project folder
+     - `significant_threshold` (optional): Minimum percentage threshold for significant mukeys (default: 1.0)
+
+5. **get_plan_results_summary**: Get comprehensive results from a specific plan
+   - Parameters:
+     - `project_path` (required): Full path to HEC-RAS project folder
+     - `plan_name` (required): Name of the plan to get results from
+
+6. **get_hdf_structure**: Explore the structure of a HEC-RAS HDF file
+   - Parameters:
+     - `hdf_path` (required): Full path to the HDF file
+     - `group_path` (optional): Internal HDF path to start exploration from (default: "/")
+
+7. **get_projection_info**: Get spatial projection information from HDF files
+   - Parameters:
+     - `hdf_path` (required): Full path to the HDF file
+
+**Note**: The HEC-RAS version is configured at the server level (see Configuration section above) and is not passed as a parameter to individual tool calls.
 
 ### Example Usage in Claude
 
@@ -83,6 +140,10 @@ Once configured, you can ask Claude:
 - "Query the HEC-RAS project at C:/Projects/MyRiverModel"
 - "Show me the plans in the Muncie test project"
 - "Get the geometries from my HEC-RAS model"
+- "Get infiltration data for my project with a 5% threshold"
+- "Show me the results summary for plan '9-SAs' in my project"
+- "Explore the HDF structure of my results file"
+- "Get the projection info from my terrain HDF"
 
 ### Testing
 

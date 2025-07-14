@@ -2,7 +2,10 @@
   "mcpServers": {
     "hecras": {
       "command": "C:\\Users\\billk\\anaconda3\\envs\\claude_test_env\\python.exe",
-      "args": ["C:\\GH\\ras-commander-mcp\\server.py"]
+      "args": ["C:\\GH\\ras-commander-mcp\\server.py"],
+      "env": {
+        "HECRAS_VERSION": "6.6"
+      }
     }
   }
 }

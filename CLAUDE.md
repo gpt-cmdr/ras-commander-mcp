@@ -20,10 +20,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ### MCP Server Pattern
 This repository implements a Model Context Protocol (MCP) server that bridges HEC-RAS hydraulic modeling software with Claude:
 
-1. **server.py**: Async Python MCP server exposing three tools:
+1. **server.py**: Async Python MCP server exposing seven tools:
    - `query_hecras_project`: Comprehensive project info (plans, geometries, flows, boundaries)
    - `get_hecras_plans`: Plan information only
    - `get_hecras_geometries`: Geometry information only
+   - `get_infiltration_data`: Infiltration layer data and soil statistics
+   - `get_plan_results_summary`: Plan results including unsteady info, volume accounting, runtime data
+   - `get_hdf_structure`: Explore HDF file structure (groups, datasets, attributes)
+   - `get_projection_info`: Spatial projection information (WKT string) from HDF files
 
 2. **Data Flow**:
    - HEC-RAS project files → ras-commander library → pandas DataFrames → formatted text → Claude

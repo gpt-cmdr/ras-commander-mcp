@@ -43,7 +43,6 @@ async def main():
                 "query_hecras_project",
                 arguments={
                     "project_path": str(muncie_path),
-                    "ras_version": "6.6",
                     "include_boundaries": False
                 }
             )
@@ -56,8 +55,7 @@ async def main():
             result = await session.call_tool(
                 "get_hecras_plans",
                 arguments={
-                    "project_path": str(muncie_path),
-                    "ras_version": "6.6"
+                    "project_path": str(muncie_path)
                 }
             )
             print("Plans Result:")
@@ -69,8 +67,7 @@ async def main():
             result = await session.call_tool(
                 "get_hecras_geometries",
                 arguments={
-                    "project_path": str(muncie_path),
-                    "ras_version": "6.6"
+                    "project_path": str(muncie_path)
                 }
             )
             print("Geometries Result:")

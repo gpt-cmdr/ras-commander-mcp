@@ -7,7 +7,8 @@
       "Bash(/c/Users/billk/anaconda3/envs/claude_test_env/python.exe -m pip install -r requirements.txt)",
       "Bash(/c/Users/billk/anaconda3/envs/claude_test_env/python.exe example_client.py)",
       "Bash(/c/Users/billk/anaconda3/envs/claude_test_env/python.exe -c \"import mcp; print(mcp.__version__)\")",
-      "Bash(/c/Users/billk/anaconda3/envs/claude_test_env/python.exe test_server.py)"
+      "Bash(/c/Users/billk/anaconda3/envs/claude_test_env/python.exe test_server.py)",
+      "Bash(/c/Users/billk/anaconda3/envs/claude_test_env/python.exe -c \"import ras_commander; print(dir(ras_commander))\")"
     ],
     "deny": []
   }

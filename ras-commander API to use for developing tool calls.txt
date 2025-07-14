@@ -1,4 +1,7 @@
 RasPrj Attributes
+
+These should be simple tool calls that provide HEC-RAS project information
+
 plan_df (pd.DataFrame): DataFrame containing plan file information.
 flow_df (pd.DataFrame): DataFrame containing flow file information.
 unsteady_df (pd.DataFrame): DataFrame containing unsteady flow file information.
@@ -7,26 +10,18 @@ boundaries_df (pd.DataFrame): DataFrame containing boundary condition informatio
 rasmap_df (pd.DataFrame): DataFrame containing RASMapper configuration data including paths to terrain, soil layer, infiltration, and land cover data.
 
 
+Generic HDF Utilities:
 
+Class: HdfBase
+Contains fundamental static methods for interacting with HEC-RAS HDF files. Used by other Hdf* classes. Requires an open h5py.File object or uses @standardize_input.
 
-
-HdfBase.get_2d_flow_area_names_and_counts(hdf_path)
-Purpose: Gets the names and cell counts of all 2D Flow Areas defined in the geometry HDF.
-Parameters:
-hdf_path (Input handled by @standardize_input): Path identifier for the HDF file (usually geometry HDF).
-Returns: List[Tuple[str, int]]: List of tuples (area_name, cell_count).
-Raises: ValueError on read errors.
 HdfBase.get_projection(hdf_path)
 Purpose: Retrieves the spatial projection information (WKT string) from the HDF file attributes or associated .rasmap file.
 Parameters:
 hdf_path (Input handled by @standardize_input): Path identifier for the HDF file.
 Returns: (str or None): Well-Known Text (WKT) string of the projection, or None if not found.
-HdfBase.get_attrs(hdf_file, attr_path)
-Purpose: Retrieves all attributes from a specific group or dataset within the HDF file.
-Parameters:
-hdf_file (h5py.File): Open HDF file object.
-attr_path (str): Internal HDF path to the group/dataset (e.g., "Plan Data/Plan Information").
-Returns: Dict[str, Any]: Dictionary of attributes. Returns empty dict if path not found.
+
+
 HdfBase.get_dataset_info(file_path, group_path='/')
 Purpose: Prints a recursive listing of the structure (groups, datasets, attributes, shapes, dtypes) within an HDF5 file, starting from group_path.
 Parameters:
@@ -36,8 +31,11 @@ Returns: None. Prints to console.
 
 
 
-Class: HdfBase
-Contains fundamental static methods for interacting with HEC-RAS HDF files. Used by other Hdf* classes. Requires an open h5py.File object or uses @standardize_input.
+
+
+HEC-RAS Project Infiltration Data
+
+The infiltration and soil HDF paths can be found in the rasmap_df
 
 
 HdfInfiltration.get_infiltration_layer_data(hdf_path: Path) -> Optional[pd.DataFrame]
@@ -61,14 +59,6 @@ Parameters:
 significant_mukeys (pd.DataFrame): DataFrame of significant mukeys.
 Returns: float: Total percentage covered by significant mukeys.
 
-HdfInfiltration.get_infiltration_parameters(hdf_path: Path = None, mukey: str = None, ras_object: Any = None) -> dict
-Purpose: Gets infiltration parameters for a specific mukey from HDF file.
-Parameters:
-hdf_path (Input handled by @standardize_input): Path identifier for the HDF file. If not provided, uses first infiltration_hdf_path from rasmap_df.
-mukey (str): Mukey identifier.
-ras_object (RasPrj, optional): Specific RAS object to use. If None, uses the global ras instance.
-Returns: dict: Dictionary of infiltration parameters.
-
 
 HdfInfiltration.calculate_weighted_parameters(soil_stats: pd.DataFrame, infiltration_params: dict) -> dict
 Purpose: Calculates weighted infiltration parameters based on soil statistics.
@@ -76,8 +66,6 @@ Parameters:
 soil_stats (pd.DataFrame): DataFrame with soil statistics.
 infiltration_params (dict): Dictionary of infiltration parameters by mukey.
 Returns: dict: Dictionary of weighted average infiltration parameters.
-
-
 
 
 HdfInfiltration.get_infiltration_baseoverrides(hdf_path: Path) -> Optional[pd.DataFrame]
@@ -88,47 +76,10 @@ Returns: Optional[pd.DataFrame]: DataFrame containing infiltration parameters if
 
 
 
+Functions to get Results information from a Plan HDF:
 
-Class: HdfPlan
-Contains static methods for extracting general plan-level information and attributes from HEC-RAS HDF files (plan or geometry HDF).
+Lump these into a single tool call - get_plan_results_summary
 
-HdfPlan.get_plan_start_time(hdf_path)
-Purpose: Gets the simulation start time from the plan HDF file.
-Parameters:
-hdf_path (Input handled by @standardize_input, file_type='plan_hdf'): Path identifier for the plan HDF.
-Returns: (datetime): Simulation start time.
-Raises: ValueError.
-HdfPlan.get_plan_end_time(hdf_path)
-Purpose: Gets the simulation end time from the plan HDF file.
-Parameters:
-hdf_path (Input handled by @standardize_input, file_type='plan_hdf'): Path identifier for the plan HDF.
-Returns: (datetime): Simulation end time.
-Raises: ValueError.
-
-
-HdfPlan.get_plan_information(hdf_path)
-Purpose: Extracts all attributes from the 'Plan Data/Plan Information' group in the plan HDF file.
-Parameters:
-hdf_path (Input handled by @standardize_input, file_type='plan_hdf'): Path identifier for the plan HDF.
-Returns: Dict[str, Any]: Dictionary of plan information attributes.
-Raises: ValueError.
-HdfPlan.get_plan_parameters(hdf_path)
-Purpose: Extracts all attributes from the 'Plan Data/Plan Parameters' group in the plan HDF file and returns them as a DataFrame. Includes the plan number extracted from the filename.
-Parameters:
-hdf_path (Input handled by @standardize_input, file_type='plan_hdf'): Path identifier for the plan HDF.
-Returns: pd.DataFrame: DataFrame with columns ['Plan', 'Parameter', 'Value'].
-Raises: ValueError.
-HdfPlan.get_plan_met_precip(hdf_path)
-Purpose: Extracts precipitation attributes from the 'Event Conditions/Meteorology/Precipitation' group in the plan HDF file.
-Parameters:
-hdf_path (Input handled by @standardize_input, file_type='plan_hdf'): Path identifier for the plan HDF.
-Returns: Dict[str, Any]: Dictionary of precipitation attributes. Returns empty dict if not found.
-HdfPlan.get_geometry_information(hdf_path)
-Purpose: Extracts root-level attributes (like Version, Units, Projection) from the 'Geometry' group in a geometry HDF file.
-Parameters:
-hdf_path (Input handled by @standardize_input, file_type='geom_hdf'): Path identifier for the geometry HDF.
-Returns: pd.DataFrame: DataFrame with columns ['Value'] and index ['Attribute Name'].
-Raises: ValueError.
 
 
 Class: HdfResultsPlan
@@ -140,18 +91,21 @@ Parameters:
 hdf_path (Input handled by @standardize_input, file_type='plan_hdf'): Path identifier for the plan results HDF.
 Returns: pd.DataFrame: Single-row DataFrame containing the unsteady results attributes.
 Raises: FileNotFoundError, KeyError, RuntimeError.
+
 HdfResultsPlan.get_unsteady_summary(hdf_path)
 Purpose: Extracts attributes from the 'Results/Unsteady/Summary' group in the plan HDF file.
 Parameters:
 hdf_path (Input handled by @standardize_input, file_type='plan_hdf'): Path identifier for the plan results HDF.
 Returns: pd.DataFrame: Single-row DataFrame containing the unsteady summary attributes.
 Raises: FileNotFoundError, KeyError, RuntimeError.
+
 HdfResultsPlan.get_volume_accounting(hdf_path)
 Purpose: Extracts attributes from the 'Results/Unsteady/Summary/Volume Accounting' group in the plan HDF file.
 Parameters:
 hdf_path (Input handled by @standardize_input, file_type='plan_hdf'): Path identifier for the plan results HDF.
 Returns: (pd.DataFrame or None): Single-row DataFrame containing volume accounting attributes, or None if the group doesn't exist.
 Raises: FileNotFoundError, RuntimeError.
+
 HdfResultsPlan.get_runtime_data(hdf_path)
 Purpose: Extracts detailed computational performance metrics (durations, speeds) for different simulation processes (Geometry, Preprocessing, Unsteady Flow) from the plan HDF file.
 Parameters:
