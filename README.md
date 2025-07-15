@@ -26,12 +26,7 @@ cd ras-commander-mcp
 
 2. Install dependencies using the Anaconda environment:
 ```bash
-# Using the specified Anaconda environment
-C:\Users\billk\anaconda3\envs\claude_test_env\python.exe -m pip install -r requirements.txt
-```
-
-Or create a new conda environment:
-```bash
+# Create and activate conda environment
 conda create -n hecras-mcp python=3.9
 conda activate hecras-mcp
 pip install -r requirements.txt
@@ -47,14 +42,14 @@ Add the following to your Claude Desktop configuration file (`claude_desktop_con
 {
   "mcpServers": {
     "hecras": {
-      "command": "C:\\Users\\billk\\anaconda3\\envs\\claude_test_env\\python.exe",
-      "args": ["C:\\GH\\ras-commander-mcp\\server.py"]
+      "command": "python",
+      "args": ["path/to/your/ras-commander-mcp/server.py"]
     }
   }
 }
 ```
 
-Adjust the paths to match your installation.
+Adjust the paths to match your installation and Python environment.
 
 ### HEC-RAS Version Configuration
 
@@ -65,8 +60,8 @@ The MCP server uses HEC-RAS version 6.6 by default. This version is NOT passed d
    {
      "mcpServers": {
        "hecras": {
-         "command": "C:\\Users\\billk\\anaconda3\\envs\\claude_test_env\\python.exe",
-         "args": ["C:\\GH\\ras-commander-mcp\\server.py"],
+         "command": "python",
+         "args": ["path/to/your/ras-commander-mcp/server.py"],
          "env": {
            "HECRAS_VERSION": "6.5"
          }
@@ -80,8 +75,8 @@ The MCP server uses HEC-RAS version 6.6 by default. This version is NOT passed d
    {
      "mcpServers": {
        "hecras": {
-         "command": "C:\\Users\\billk\\anaconda3\\envs\\claude_test_env\\python.exe",
-         "args": ["C:\\GH\\ras-commander-mcp\\server.py"],
+         "command": "python",
+         "args": ["path/to/your/ras-commander-mcp/server.py"],
          "env": {
            "HECRAS_PATH": "C:\\Program Files\\HEC\\HEC-RAS\\6.5\\HEC-RAS.exe"
          }
@@ -150,8 +145,8 @@ Once configured, you can ask Claude:
 Run the example client to test the server:
 
 ```bash
-# Using the Anaconda environment
-C:\Users\billk\anaconda3\envs\claude_test_env\python.exe example_client.py
+# Using the activated conda environment
+python example_client.py
 ```
 
 This will query the included Muncie test data and display the results.
@@ -182,4 +177,8 @@ To modify or extend the server:
 
 ## License
 
-This project is provided as-is for interfacing with HEC-RAS projects through Claude Desktop.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Trademarks
+
+See [TRADEMARKS.md](TRADEMARKS.md) for trademark information and compliance policies.

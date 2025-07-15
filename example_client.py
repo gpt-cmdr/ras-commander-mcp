@@ -12,9 +12,9 @@ from mcp.client.stdio import stdio_client
 async def main():
     """Example of using the HEC-RAS MCP server"""
     
-    # Create server parameters - adjust the path to your server.py
+    # Create server parameters - using python from current environment
     server_params = StdioServerParameters(
-        command=r"C:\Users\billk\anaconda3\envs\claude_test_env\python.exe",
+        command="python",
         args=["./server.py"],
         env=None
     )
