@@ -1,0 +1,88 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 450 300">
+  <!-- Background with gradient -->
+  <defs>
+    <linearGradient id="bg-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#05386B" />
+      <stop offset="100%" stop-color="#0B93C7" />
+    </linearGradient>
+    
+    <!-- Digital circuit pattern -->
+    <pattern id="circuit-pattern" patternUnits="userSpaceOnUse" width="50" height="50" patternTransform="rotate(45)">
+      <path d="M10,0 L10,50 M0,10 L50,10 M20,20 L30,20 L30,30 M40,10 L40,40 L30,40" fill="none" stroke="#5CDB95" stroke-width="0.5" stroke-opacity="0.3" />
+    </pattern>
+  </defs>
+  
+  <!-- Main background -->
+  <rect width="450" height="300" fill="url(#bg-gradient)" />
+  
+  <!-- Circuit pattern overlay -->
+  <rect width="450" height="300" fill="url(#circuit-pattern)" opacity="0.2" />
+  
+  <!-- Main title at the top -->
+  <text x="225" y="45" font-family="Arial, sans-serif" font-size="36" font-weight="bold" text-anchor="middle" fill="#EDF5E1">RAS COMMANDER</text>
+  
+  <!-- Central circular emblem -->
+  <circle cx="225" cy="150" r="100" fill="#05386B" stroke="#5CDB95" stroke-width="2" />
+  
+  <!-- Horizontal rectangle overlay -->
+  <rect x="55" y="185" width="340" height="50" fill="#05386B" stroke="#5CDB95" stroke-width="2" rx="2" ry="2" />
+  
+  <!-- MCP Protocol interface at top of circle -->
+  <rect x="165" y="80" width="120" height="30" rx="3" ry="3" fill="#000" fill-opacity="0.85" />
+  <text x="225" y="92" font-family="Consolas, monospace" font-size="8" fill="#5CDB95" text-anchor="middle">Model Context Protocol</text>
+  <text x="225" y="102" font-family="Consolas, monospace" font-size="10" fill="#5CDB95" text-anchor="middle">LLM ⟷ HEC-RAS</text>
+  
+  <!-- Connection indicators - animated dots showing data flow -->
+  <circle cx="180" cy="125" r="2" fill="#5CDB95">
+    <animate attributeName="opacity" values="0;1;0" dur="2s" repeatCount="indefinite" />
+  </circle>
+  <circle cx="200" cy="125" r="2" fill="#5CDB95">
+    <animate attributeName="opacity" values="0;1;0" dur="2s" repeatCount="indefinite" begin="0.3s" />
+  </circle>
+  <circle cx="220" cy="125" r="2" fill="#5CDB95">
+    <animate attributeName="opacity" values="0;1;0" dur="2s" repeatCount="indefinite" begin="0.6s" />
+  </circle>
+  <circle cx="240" cy="125" r="2" fill="#5CDB95">
+    <animate attributeName="opacity" values="0;1;0" dur="2s" repeatCount="indefinite" begin="0.9s" />
+  </circle>
+  <circle cx="260" cy="125" r="2" fill="#5CDB95">
+    <animate attributeName="opacity" values="0;1;0" dur="2s" repeatCount="indefinite" begin="1.2s" />
+  </circle>
+  
+  <!-- Dynamic water wave bands - centered in circle -->
+  <g opacity="0.7">
+    <path d="M129,135 C145,125 165,145 185,135 C205,125 225,145 245,135 C265,125 285,145 321,135" fill="none" stroke="#5CDB95" stroke-width="4">
+      <animate attributeName="d" 
+               values="M129,135 C145,125 165,145 185,135 C205,125 225,145 245,135 C265,125 285,145 321,135;
+                       M129,135 C145,145 165,125 185,135 C205,145 225,125 245,135 C265,145 285,125 321,135;
+                       M129,135 C145,125 165,145 185,135 C205,125 225,145 245,135 C265,125 285,145 321,135"
+               dur="4s" repeatCount="indefinite" />
+    </path>
+    <path d="M125,155 C145,145 165,165 185,155 C205,145 225,165 245,155 C265,145 285,165 325,155" fill="none" stroke="#5CDB95" stroke-width="4">
+      <animate attributeName="d" 
+               values="M125,155 C145,145 165,165 185,155 C205,145 225,165 245,155 C265,145 285,165 325,155;
+                       M125,155 C145,165 165,145 185,155 C205,165 225,145 245,155 C265,165 285,145 325,155;
+                       M125,155 C145,145 165,165 185,155 C205,145 225,165 245,155 C265,145 285,165 325,155"
+               dur="4s" repeatCount="indefinite" begin="0.5s" />
+    </path>
+    <path d="M125,175 C145,165 165,185 185,175 C205,165 225,185 245,175 C265,165 285,185 325,175" fill="none" stroke="#5CDB95" stroke-width="4">
+      <animate attributeName="d" 
+               values="M125,175 C145,165 165,185 185,175 C205,165 225,185 245,175 C265,165 285,185 325,175;
+                       M125,175 C145,185 165,165 185,175 C205,185 225,165 245,175 C265,185 285,165 325,175;
+                       M125,175 C145,165 165,185 185,175 C205,165 225,185 245,175 C265,165 285,185 325,175"
+               dur="4s" repeatCount="indefinite" begin="1s" />
+    </path>
+  </g>
+  
+  <!-- Server status indicator -->
+  <circle cx="310" cy="140" r="4" fill="#5CDB95">
+    <animate attributeName="opacity" values="1;0.3;1" dur="3s" repeatCount="indefinite" />
+  </circle>
+  
+  <!-- Subtitle text inside the horizontal band -->
+  <text x="225" y="206" font-family="Arial, sans-serif" font-size="20" font-weight="bold" text-anchor="middle" fill="#EDF5E1">MCP SERVER</text>
+  <text x="225" y="226" font-family="Arial, sans-serif" font-size="16" font-weight="normal" text-anchor="middle" fill="#EDF5E1">MCP SERVER FOR HEC-RAS 6.x</text>
+  
+  <!-- Protocol tagline -->
+  <text x="225" y="275" font-family="Arial, sans-serif" font-size="16" text-anchor="middle" fill="#8EE4AF" opacity="0.7">Connect • Query • Analyze</text>
+</svg>

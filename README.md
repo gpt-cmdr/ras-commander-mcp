@@ -1,6 +1,11 @@
 # HEC-RAS MCP Server
 
-An MCP (Model Context Protocol) server that provides tools for querying HEC-RAS project information using the ras-commander library. This allows Claude Desktop to interact with HEC-RAS hydraulic modeling projects.
+<div align="center">
+  <img src="ras_commander_mcp_logo.svg" alt="RAS Commander MCP Logo" width="70%">
+</div>  
+
+
+The RAS Commander MCP (Model Context Protocol) server provides tools for querying HEC-RAS project information using the ras-commander library. This allows Claude Desktop to interact with HEC-RAS hydraulic modeling projects.
 
 ## Features
 
