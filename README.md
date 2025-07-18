@@ -56,10 +56,11 @@ pip install mcp ras-commander pandas
 
 ## Configuration
 
-### Claude Desktop Integration with uvx (Recommended)
+### Claude Desktop Integration (Recommended)
 
 Add the following to your Claude Desktop configuration file (`claude_desktop_config.json`):
 
+#### Option 1: From Git Repository (Automatic Updates)
 ```json
 {
   "mcpServers": {
@@ -77,16 +78,32 @@ Add the following to your Claude Desktop configuration file (`claude_desktop_con
 }
 ```
 
-### Alternative: Using Local Installation
-
-If you've cloned the repository locally and want to run from source:
+#### Option 2: Local Development Installation
+If you've cloned the repository locally for development:
 
 ```json
 {
   "mcpServers": {
     "hecras": {
       "command": "uv",
-      "args": ["run", "python", "path/to/your/ras-commander-mcp/server.py"],
+      "args": ["run", "--directory", "C:\\path\\to\\ras-commander-mcp-main", "ras-commander-mcp"],
+      "env": {
+        "HECRAS_VERSION": "6.6"
+      }
+    }
+  }
+}
+```
+
+#### Option 3: Direct Python Execution
+Alternative approach using Python directly:
+
+```json
+{
+  "mcpServers": {
+    "hecras": {
+      "command": "uv",
+      "args": ["run", "python", "C:\\path\\to\\ras-commander-mcp-main\\server.py"],
       "env": {
         "HECRAS_VERSION": "6.6"
       }
@@ -134,6 +151,21 @@ The MCP server uses HEC-RAS version 6.6 by default. To use a different version:
      }
    }
    ```
+
+### Testing Configuration
+
+Before adding to Claude Desktop, test your configuration:
+
+```bash
+# For local development:
+cd path/to/ras-commander-mcp-main
+set HECRAS_VERSION=6.6
+uv run ras-commander-mcp
+
+# Should start successfully showing:
+# Starting HEC-RAS MCP Server...
+# RAS Commander MCP by CLB Engineering Corporation
+```
 
 ## Usage
 
@@ -195,20 +227,19 @@ This MCP server is built on top of the [ras-commander](https://github.com/gpt-cm
 
 ## Testing
 
-### Using uv
+### Running Tests
 
-Run the test suite from the project directory:
+From the project directory, run the complete test suite:
 
 ```bash
-# Run all tests
-uv run python tests/test_all_tools.py
-
-# Test single tool
-uv run python tests/test_single_tool.py
-
-# Test server functionality
-uv run python tests/test_server.py
+# Install dependencies and run all tests
+uv sync
+uv run python tests/test_server.py          # Basic server functionality
+uv run python tests/test_all_tools.py       # Comprehensive tool validation  
+uv run python tests/test_single_tool.py     # Single tool testing utility
 ```
+
+Test outputs are saved to `tests/outputs/` as markdown files for review.
 
 ### Test Data
 

@@ -24,7 +24,9 @@
       "Bash(C:Users%USERNAME%anaconda3envsclaude_test_envpython.exe -c \"\nimport asyncio\nimport sys\nfrom pathlib import Path\nsys.path.insert(0, ''.'')\nfrom server import handle_call_tool\n\nasync def test_hdf_structure():\n    result = await handle_call_tool(''get_hdf_structure'', {\n        ''hdf_path'': ''C:\\GH\\ras-commander-mcp-main\\testdata\\BeaverLake\\BeaverLakeSWMMImpor.p01.hdf'',\n        ''group_path'': ''/Results''\n    })\n    print(result[0].text)\n\nasyncio.run(test_hdf_structure())\n\")",
       "Bash(/c/Users/billk/AppData/Local/Microsoft/WindowsApps/python3 -c \"\nimport asyncio\nimport sys\nfrom pathlib import Path\nsys.path.insert(0, ''.'')\nfrom server import handle_call_tool\n\nasync def test_hdf_structure():\n    result = await handle_call_tool(''get_hdf_structure'', {\n        ''hdf_path'': ''C:\\\\GH\\\\ras-commander-mcp-main\\\\testdata\\\\BeaverLake\\\\BeaverLakeSWMMImpor.p01.hdf'',\n        ''group_path'': ''/Results''\n    })\n    print(result[0].text)\n\nasyncio.run(test_hdf_structure())\n\")",
       "Bash(rm:*)",
-      "Bash(py tests/test_server.py)"
+      "Bash(py tests/test_server.py)",
+      "Bash(set HECRAS_VERSION=6.6)",
+      "Bash(ras-commander-mcp)"
     ],
     "deny": []
   }
