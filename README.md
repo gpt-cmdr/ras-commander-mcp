@@ -19,6 +19,22 @@ For a demonstration of CLB's H&H automation services, contact us at info@clbengi
 - Formatted text output suitable for LLM interaction
 - Error handling with helpful diagnostics
 
+## Future Features
+
+- List Geometry Elements
+    1D List Rivers/Reaches
+    1D Cross Sections by River and Reach
+    2D Reference Lines
+    Boundary Lines
+    1D and 2D Structures
+    
+- Summary Results at Boundaries (Max WSE and Max Flow)
+- Also Structures (list them all with max wse snd max flow)
+- Detailed XSEC results table (by river/reach) for debugging
+
+- HEC-RAS Documentation Search Capability (return relevant confluence document links via RAG or deep research)
+
+
 ## Prerequisites
 
 1. **HEC-RAS Installation**: HEC-RAS must be installed on your system (default expects version 6.6)
