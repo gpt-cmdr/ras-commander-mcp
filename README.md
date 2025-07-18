@@ -4,13 +4,17 @@
   <img src="ras_commander_mcp_logo.svg" alt="RAS Commander MCP Logo" width="70%">
 </div>  
 
-
 The RAS Commander MCP (Model Context Protocol) server provides tools for querying HEC-RAS project information using the ras-commander library. This allows Claude Desktop to interact with HEC-RAS hydraulic modeling projects.
+
+**RAS Commander MCP** is an open-source, LLM-forward H&H automation tool provided under MIT license by [CLB Engineering Corporation](https://clbengineering.com/). This is third-party software and is not made by or endorsed by the U.S. Army Corps of Engineers (USACE) Hydrologic Engineering Center (HEC).
+
+For a demonstration of CLB's H&H automation services, contact us at info@clbengineering.com
 
 ## Features
 
 - Query comprehensive HEC-RAS project information (plans, geometries, flows, boundaries)
-- Get specific components (plans only, geometries only)
+- Extract detailed plan results including unsteady simulation info and runtime metrics
+- Explore HDF file structures and extract computation messages
 - Support for multiple HEC-RAS versions (6.5, 6.6, etc.)
 - Formatted text output suitable for LLM interaction
 - Error handling with helpful diagnostics
@@ -18,28 +22,41 @@ The RAS Commander MCP (Model Context Protocol) server provides tools for queryin
 ## Prerequisites
 
 1. **HEC-RAS Installation**: HEC-RAS must be installed on your system (default expects version 6.6)
-2. **Python**: Python 3.8+ with Anaconda recommended
+2. **Python**: Python 3.10+
 3. **Claude Desktop**: For MCP integration
+4. **uv**: Python package manager (recommended)
 
 ## Installation
 
-1. Clone this repository:
+### Using uv (Recommended)
+
+1. Install uv if you haven't already:
+```bash
+# Windows (PowerShell)
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+
+# macOS/Linux
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+2. Clone this repository:
 ```bash
 git clone <repository-url>
 cd ras-commander-mcp
 ```
 
-2. Install dependencies using the Anaconda environment:
+3. The dependencies will be automatically installed when you run the server with uvx (see Configuration below).
+
+### Using pip (Alternative)
+
+If you prefer to use pip:
 ```bash
-# Create and activate conda environment
-conda create -n hecras-mcp python=3.9
-conda activate hecras-mcp
-pip install -r requirements.txt
+pip install mcp ras-commander pandas
 ```
 
 ## Configuration
 
-### Claude Desktop Integration
+### Claude Desktop Integration with uvx (Recommended)
 
 Add the following to your Claude Desktop configuration file (`claude_desktop_config.json`):
 
@@ -47,26 +64,51 @@ Add the following to your Claude Desktop configuration file (`claude_desktop_con
 {
   "mcpServers": {
     "hecras": {
-      "command": "python",
-      "args": ["path/to/your/ras-commander-mcp/server.py"]
+      "command": "uvx",
+      "args": [
+        "--from", "ras-commander-mcp@git+https://github.com/gpt-cmdr/ras-commander-mcp.git",
+        "ras-commander-mcp"
+      ],
+      "env": {
+        "HECRAS_VERSION": "6.6"
+      }
     }
   }
 }
 ```
 
-Adjust the paths to match your installation and Python environment.
+### Alternative: Using Local Installation
+
+If you've cloned the repository locally and want to run from source:
+
+```json
+{
+  "mcpServers": {
+    "hecras": {
+      "command": "uv",
+      "args": ["run", "python", "path/to/your/ras-commander-mcp/server.py"],
+      "env": {
+        "HECRAS_VERSION": "6.6"
+      }
+    }
+  }
+}
+```
 
 ### HEC-RAS Version Configuration
 
-The MCP server uses HEC-RAS version 6.6 by default. This version is NOT passed directly in tool calls but is configured at the server level. To use a different version of HEC-RAS:
+The MCP server uses HEC-RAS version 6.6 by default. To use a different version:
 
 1. **Set HEC-RAS Version** (if you have a different version installed):
    ```json
    {
      "mcpServers": {
        "hecras": {
-         "command": "python",
-         "args": ["path/to/your/ras-commander-mcp/server.py"],
+         "command": "uvx",
+         "args": [
+           "--from", "ras-commander-mcp@git+https://github.com/gpt-cmdr/ras-commander-mcp.git",
+           "ras-commander-mcp"
+         ],
          "env": {
            "HECRAS_VERSION": "6.5"
          }
@@ -80,8 +122,11 @@ The MCP server uses HEC-RAS version 6.6 by default. This version is NOT passed d
    {
      "mcpServers": {
        "hecras": {
-         "command": "python",
-         "args": ["path/to/your/ras-commander-mcp/server.py"],
+         "command": "uvx",
+         "args": [
+           "--from", "ras-commander-mcp@git+https://github.com/gpt-cmdr/ras-commander-mcp.git",
+           "ras-commander-mcp"
+         ],
          "env": {
            "HECRAS_PATH": "C:\\Program Files\\HEC\\HEC-RAS\\6.5\\HEC-RAS.exe"
          }
@@ -90,53 +135,48 @@ The MCP server uses HEC-RAS version 6.6 by default. This version is NOT passed d
    }
    ```
 
-**Important**: If you encounter errors about HEC-RAS not being found, ensure that:
-- HEC-RAS 6.6 is installed in the default location, OR
-- Change the configuration to match your installed HEC-RAS version using the `HECRAS_VERSION` environment variable, OR
-- Specify the full path to your HEC-RAS executable using the `HECRAS_PATH` environment variable
-
 ## Usage
 
 ### Available Tools
 
-1. **query_hecras_project**: Get comprehensive project information
+All tools provided by this MCP server leverage the [ras-commander](https://github.com/gpt-cmdr/ras-commander) Python library for advanced HEC-RAS automation capabilities.
+
+1. **hecras_project_summary**: Get comprehensive or selective project information
    - Parameters:
      - `project_path` (required): Full path to HEC-RAS project folder
-     - `include_boundaries` (optional): Include boundary conditions (default: false)
+     - `show_rasprj` (optional): Show project file contents (default: true)
+     - `show_plan_df` (optional): Show plan files and metadata (default: true)
+     - `show_geom_df` (optional): Show geometry files (default: true)
+     - `show_flow_df` (optional): Show steady flow data (default: true)
+     - `show_unsteady_df` (optional): Show unsteady flow data (default: true)
+     - `show_boundaries` (optional): Show boundary conditions (default: true)
+     - `show_rasmap` (optional): Show RASMapper configuration (default: false)
+     - `showmore` (optional): Show all columns/verbose mode (default: false)
 
-2. **get_hecras_plans**: Get only plan information
+2. **read_plan_description**: Read multi-line description from a plan file
    - Parameters:
      - `project_path` (required): Full path to HEC-RAS project folder
+     - `plan_number` (required): Plan number (e.g., '1', '01', '02')
 
-3. **get_hecras_geometries**: Get only geometry information
+3. **get_plan_results_summary**: Get comprehensive results from a specific plan
    - Parameters:
      - `project_path` (required): Full path to HEC-RAS project folder
+     - `plan_number` (required): Plan number or full path to plan HDF file
 
-4. **get_infiltration_data**: Get infiltration layer data and soil statistics
+4. **get_compute_messages**: Get computation messages and performance metrics
    - Parameters:
      - `project_path` (required): Full path to HEC-RAS project folder
-     - `significant_threshold` (optional): Minimum percentage threshold for significant mukeys (default: 1.0)
+     - `plan_number` (required): Plan number or full path to plan HDF file
 
-5. **get_plan_results_summary**: Get comprehensive results from a specific plan
-   - Parameters:
-     - `project_path` (required): Full path to HEC-RAS project folder
-     - `plan_number` (required): Plan number (e.g., '1', '01', '02') or full path to plan HDF file
-
-6. **get_compute_messages**: Get computation messages and performance metrics
-   - Parameters:
-     - `project_path` (required): Full path to HEC-RAS project folder
-     - `plan_number` (required): Plan number (e.g., '1', '01', '02') or full path to plan HDF file
-
-7. **get_hdf_structure**: Explore the structure of a HEC-RAS HDF file
+5. **get_hdf_structure**: Explore HDF file structure
    - Parameters:
      - `hdf_path` (required): Full path to the HDF file
      - `group_path` (optional): Internal HDF path to start exploration from (default: "/")
+     - `paths_only` (optional): Show only paths without details (default: false)
 
-8. **get_projection_info**: Get spatial projection information from HDF files
+6. **get_projection_info**: Get spatial projection information (WKT)
    - Parameters:
      - `hdf_path` (required): Full path to the HDF file
-
-**Note**: The HEC-RAS version is configured at the server level (see Configuration section above) and is not passed as a parameter to individual tool calls.
 
 ### Example Usage in Claude
 
@@ -144,47 +184,53 @@ Once configured, you can ask Claude:
 
 - "Query the HEC-RAS project at C:/Projects/MyRiverModel"
 - "Show me the plans in the Muncie test project"
-- "Get the geometries from my HEC-RAS model"
-- "Show me the results summary for plan '01' in my project"
-- "Show me the compute messages for plan '1' in my project"
-- "Get the computation performance metrics from the last simulation"
+- "Get the results summary for plan '01' in my project"
+- "Show me the compute messages for plan '1'"
 - "Explore the HDF structure of my results file"
 - "Get the projection info from my terrain HDF"
 
-### Testing
+## Python Library Reference
 
-Run the example client to test the server:
+This MCP server is built on top of the [ras-commander](https://github.com/gpt-cmdr/ras-commander) Python library, which provides comprehensive programmatic access to HEC-RAS projects. For advanced Python scripting and automation beyond what's available through the MCP interface, refer to the ras-commander documentation.
+
+## Testing
+
+### Using uv
+
+Run the test suite from the project directory:
 
 ```bash
-# Using the activated conda environment
-python example_client.py
+# Run all tests
+uv run python tests/test_all_tools.py
+
+# Test single tool
+uv run python tests/test_single_tool.py
+
+# Test server functionality
+uv run python tests/test_server.py
 ```
 
-This will query the included Muncie test data and display the results.
+### Test Data
 
-## Test Data
-
-The `testdata/Muncie/` folder contains a complete HEC-RAS project for testing, including:
-- HDF5 result files
-- Terrain data
-- Geometry files
-- Plan files
-- Boundary conditions
-- GIS shapefiles
+The `testdata/` folder contains complete HEC-RAS projects for testing:
+- `Muncie/`: Complete project with terrain, results, and boundary conditions
+- `BeaverLake/`: Additional test project
 
 ## Troubleshooting
 
-1. **ImportError for ras-commander**: Ensure ras-commander is installed and HEC-RAS is properly installed
+1. **ImportError for ras-commander**: Ensure HEC-RAS is properly installed
 2. **Project not found**: Verify the project path exists and contains .prj files
 3. **Version errors**: Check that the specified HEC-RAS version matches your installation
+4. **MCP connection issues**: Verify Claude Desktop configuration and restart Claude
 
 ## Development
 
 To modify or extend the server:
 
-1. Edit `server.py` to add new tools or modify existing ones
-2. Test changes with `example_client.py`
-3. Update Claude Desktop configuration if paths change
+1. Clone the repository
+2. Make changes to `server.py`
+3. Test with: `uv run python tests/test_all_tools.py`
+4. Update Claude Desktop configuration if needed
 
 ## License
 
@@ -193,3 +239,9 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## Trademarks
 
 See [TRADEMARKS.md](TRADEMARKS.md) for trademark information and compliance policies.
+
+## About
+
+**RAS Commander MCP** is developed and maintained by [CLB Engineering Corporation](https://clbengineering.com/) as part of our commitment to advancing H&H automation through open-source tools.
+
+For professional H&H automation services and custom solutions, contact us at info@clbengineering.com

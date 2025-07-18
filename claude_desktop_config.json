@@ -1,8 +1,11 @@
 {
   "mcpServers": {
     "hecras": {
-      "command": "C:\\Users\\billk\\anaconda3\\envs\\claude_test_env\\python.exe",
-      "args": ["C:\\GH\\ras-commander-mcp\\server.py"],
+      "command": "uvx",
+      "args": [
+        "--from", "ras-commander-mcp@git+https://github.com/gpt-cmdr/ras-commander-mcp.git",
+        "ras-commander-mcp"
+      ],
       "env": {
         "HECRAS_VERSION": "6.6"
       }

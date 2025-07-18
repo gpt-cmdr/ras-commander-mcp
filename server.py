@@ -249,11 +249,20 @@ def dataframe_to_text(df: pd.DataFrame, name: str, df_type: str = None, showmore
 
 @server.list_tools()
 async def handle_list_tools() -> list[Tool]:
-    """List available tools."""
+    """
+    List available tools for HEC-RAS project interaction.
+    
+    RAS Commander MCP is an open-source, LLM-forward H&H automation tool 
+    provided under MIT license by CLB Engineering Corporation (https://clbengineering.com/).
+    This is third-party software and is not made by or endorsed by USACE HEC.
+    
+    For advanced Python automation capabilities, see: https://github.com/gpt-cmdr/ras-commander
+    For H&H automation services demonstration, contact: info@clbengineering.com
+    """
     return [
         Tool(
             name="hecras_project_summary",
-            description="Get comprehensive or selective HEC-RAS project information",
+            description="Get comprehensive or selective HEC-RAS project information. Built on the ras-commander library (https://github.com/gpt-cmdr/ras-commander) for advanced HEC-RAS automation.",
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -307,7 +316,7 @@ async def handle_list_tools() -> list[Tool]:
         ),
         Tool(
             name="read_plan_description",
-            description="Read the multi-line description block from a HEC-RAS plan file",
+            description="Read the multi-line description block from a HEC-RAS plan file. Part of the RAS Commander MCP suite by CLB Engineering Corporation.",
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -325,7 +334,7 @@ async def handle_list_tools() -> list[Tool]:
         ),
         Tool(
             name="get_plan_results_summary",
-            description="Get comprehensive results summary from a HEC-RAS plan including unsteady info, volume accounting, and runtime data. Accepts plan numbers (e.g., '1' or '01') or full HDF path.",
+            description="Get comprehensive results summary from a HEC-RAS plan including unsteady info, volume accounting, and runtime data. Powered by ras-commander library.",
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -343,7 +352,7 @@ async def handle_list_tools() -> list[Tool]:
         ),
         Tool(
             name="get_hdf_structure",
-            description="Explore the structure of a HEC-RAS HDF file showing groups, datasets, attributes, shapes, and dtypes. CAUTION: Use on 3rd level data structures or deeper (e.g., /Event Conditions/Unsteady/Boundary Conditions) to avoid output truncation.",
+            description="Explore the structure of a HEC-RAS HDF file. CAUTION: Use on 3rd level data structures or deeper to avoid output truncation. Part of RAS Commander MCP by CLB Engineering.",
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -367,7 +376,7 @@ async def handle_list_tools() -> list[Tool]:
         ),
         Tool(
             name="get_projection_info",
-            description="Get spatial projection information (WKT string) from a HEC-RAS HDF file",
+            description="Get spatial projection information (WKT string) from a HEC-RAS HDF file. Built with ras-commander for advanced geospatial capabilities.",
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -381,7 +390,7 @@ async def handle_list_tools() -> list[Tool]:
         ),
         Tool(
             name="get_compute_messages",
-            description="Get computation messages and performance metrics from a HEC-RAS plan including timing, tasks completed, and computation speeds. Accepts plan numbers (e.g., '1' or '01') or full HDF path.",
+            description="Get computation messages and performance metrics from a HEC-RAS plan. RAS Commander MCP - professional H&H automation by CLB Engineering Corporation.",
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -855,6 +864,8 @@ async def main():
     """Main entry point for the MCP server."""
     async with stdio_server() as (read_stream, write_stream):
         logger.info("Starting HEC-RAS MCP Server...")
+        logger.info("RAS Commander MCP by CLB Engineering Corporation")
+        logger.info("Built on ras-commander: https://github.com/gpt-cmdr/ras-commander")
         
         await server.run(
             read_stream,
@@ -868,6 +879,10 @@ async def main():
                 ),
             ),
         )
+
+def run():
+    """Entry point for console script."""
+    asyncio.run(main())
 
 if __name__ == "__main__":
     asyncio.run(main())
