@@ -26,7 +26,7 @@ OMIT_FOLDERS = [
 ]
 OMIT_FILES = [
     ".lyrx", ".png",".hdf", ".pyc", ".pyo", ".pyd", ".dll", ".so", ".dylib", ".exe",
-    ".bat", ".sh", ".log", ".tmp", ".bak", ".swp", "uv.lock",
+    ".bat", ".sh", ".log", ".tmp", ".bak", ".swp",
     ".DS_Store", "Thumbs.db", "example_projects.zip",
     "Example_Projects_6_6.zip", "example_projects.ipynb", "11_Using_RasExamples.ipynb", 
     "future_dev_roadmap.ipynb", "structures_attributes.csv", "example_projects.csv",

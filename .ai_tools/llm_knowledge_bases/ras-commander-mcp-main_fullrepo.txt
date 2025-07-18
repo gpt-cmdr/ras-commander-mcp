@@ -6,10 +6,8 @@ Project Structure (files included):
 ├── NonWorking_Tools.md
 ├── README.md
 ├── TRADEMARKS.md
-├── __main__.py
 ├── claude_desktop_config.json
 ├── package.json
-├── pyproject.toml
 ├── ras-commander reference files
 │   ├── HdfPlan.py
 │   ├── HdfResultsPlan.py
@@ -45,41 +43,33 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Commands
 
 ### Build & Development
-- **Install dependencies**: `uv pip install mcp ras-commander pandas` or `uv sync`
-- **Run MCP server**: `uv run python server.py`
-- **Alternative for testing**: `uvx --from . ras-commander-mcp`
-- **Debug mode**: `uv run python server.py 2>&1 | grep DEBUG` - Shows comprehensive stderr logging for troubleshooting
+- **Install dependencies**: `pip install -r requirements.txt` or `pip install mcp ras-commander pandas`
+- **Run MCP server**: `python server.py`
+- **Python environment**: Use Anaconda3 installation in Windows user folder for consistency with ras-commander
+- **Alternative Python**: uv is also installed and can be invoked via PowerShell
 
 ### Testing & Validation
-- **Comprehensive testing**: `uv run python tests/test_all_tools.py` - Tests all MCP tools on both Muncie and BeaverLake projects
-- **Single tool testing**: `uv run python tests/test_single_tool.py` - Modify the script to test specific tools quickly
-- **Direct server testing**: `uv run python tests/test_server.py` - Basic functionality validation
+- **Comprehensive testing**: `python tests/test_all_tools.py` - Tests all MCP tools on both Muncie and BeaverLake projects
+- **Single tool testing**: `python tests/test_single_tool.py` - Modify the script to test specific tools quickly
+- **Direct server testing**: `python tests/test_server.py` - Basic functionality validation
 - **Test data locations**: `testdata/Muncie/` and `testdata/BeaverLake/` contain complete HEC-RAS projects
 - **Test outputs**: Check `tests/outputs/` for markdown reports of tool functionality
 - **Integration testing**: Configure in Claude Desktop and test with actual HEC-RAS queries
 
 ### Required Post-Update Testing
 After making changes to the MCP server, run these tests in order:
-1. `uv run python tests/test_server.py` - Verify basic server functionality
-2. `uv run python tests/test_all_tools.py` - Comprehensive tool validation
+1. `python tests/test_server.py` - Verify basic server functionality
+2. `python tests/test_all_tools.py` - Comprehensive tool validation
 3. Review output files in `tests/outputs/` directory
 4. Test Claude Desktop integration with sample queries
-
-### Debugging & Troubleshooting
-- **View debug output**: `uv run python tests/test_server.py 2>&1 | grep "\[DEBUG\]"` - Shows all debug messages
-- **Diagnose import issues**: Check stderr for "Error importing" messages during server startup
-- **Monitor tool calls**: Debug output shows exact function calls and arguments passed to each tool
-- **Claude Desktop logs**: stderr output appears in Claude Desktop application logs for real-time debugging
-- **Server startup sequence**: Debug messages trace: imports → server creation → configuration → tool registration → MCP protocol initialization
-- **Error context**: All exceptions include full debug context showing exactly where failures occur
 
 ## Project Structure
 
 ```
 ras-commander-mcp-main/
 ├── server.py                    # Main MCP server implementation
-├── pyproject.toml              # Package configuration with dependencies
-├── requirements.txt            # Legacy pip dependencies (for compatibility)
+├── package.json                # MCP server configuration
+├── requirements.txt            # Python dependencies
 ├── claude_desktop_config.json  # Example Claude Desktop configuration
 ├── tests/                      # Testing suite
 │   ├── __init__.py
@@ -97,27 +87,27 @@ ras-commander-mcp-main/
 ## Architecture
 
 ### MCP Server Implementation
-This repository implements a Model Context Protocol (MCP) server that bridges HEC-RAS hydraulic modeling software with Claude Desktop. The server is built on top of the [ras-commander](https://github.com/gpt-cmdr/ras-commander) Python library.
+This repository implements a Model Context Protocol (MCP) server that bridges HEC-RAS hydraulic modeling software with Claude Desktop:
 
-**Core MCP Tools** (server.py:285-451):
-- `hecras_project_summary`: Comprehensive or selective project information with boolean flags controlling output sections
+**Core MCP Tools** (server.py:136-280):
+- `hecras_project_summary`: Comprehensive or selective project information with boolean flags controlling output sections including project file contents, verbosity
 - `read_plan_description`: Extract the multi-line description from a specific plan file
-- `get_plan_results_summary`: Detailed plan results including unsteady simulation info, volume accounting, and runtime performance data
-- `get_compute_messages`: Computation messages and performance metrics from HEC-RAS simulations with smart truncation
+- `get_plan_results_summary`: Detailed plan results including unsteady simulation info, volume accounting, and runtime performance data (uses `plan_number` parameter)
+- `get_compute_messages`: Computation messages and performance metrics from HEC-RAS simulations with smart truncation (uses `plan_number` parameter)
 - `get_hdf_structure`: HDF file structure exploration with group/dataset details and attributes
 - `get_projection_info`: Spatial projection information (WKT format) extraction from HDF files
 
 **Data Processing Pipeline**:
 1. HEC-RAS project files (.prj, .g*, .p*, .u*, etc.) 
 2. ras-commander library parsing → pandas DataFrames
-3. DataFrame filtering and formatting (server.py:215-283)
-4. Text conversion with truncation limits (server.py:199-213)
+3. DataFrame filtering and formatting (server.py:66-135)
+4. Text conversion with truncation limits (server.py:50-65)
 5. Structured output to Claude via MCP protocol
 
 **ras-commander Integration**:
 - Uses `ras_commander.init_ras_project()` for project initialization
 - Leverages `HdfBase`, `HdfResultsPlan` classes for HDF data access
-- Implements local `get_compute_messages_local()` for simulation performance analysis
+- Implements `HdfResultsPlan.get_compute_messages()` for simulation performance analysis
 - Plan identification supports both numeric ("1", "01") and full HDF path inputs with auto-padding
 - Follows ras-commander naming conventions and API patterns
 - Supports HEC-RAS versions 6.5, 6.6 (configurable via environment variables)
@@ -129,29 +119,17 @@ This repository implements a Model Context Protocol (MCP) server that bridges HE
 - **h5py**: Direct HDF5 file access for structure exploration
 
 ### Error Handling & Robustness
-- Path validation before project initialization (server.py:476-480)
+- Path validation before project initialization (server.py:272-276)
 - Graceful handling of missing data components (plans, geometries, boundaries)
 - Detailed error messages for common issues (version mismatches, missing files)
-- Output truncation to prevent token limit exceeded errors (server.py:199-213)
-- DataFrame column filtering for concise vs verbose output modes (server.py:215-283)
-
-### Debugging & Diagnostics Architecture
-- **Comprehensive stderr logging**: `debug_print()` function outputs detailed diagnostic messages to stderr (server.py:20-22)
-- **Import validation**: Step-by-step verification of MCP and ras-commander library imports with specific error reporting (server.py:26-48)
-- **Server lifecycle tracking**: Debug messages for server initialization, tool calls, and execution flow (server.py:924-967)
-- **Tool call instrumentation**: Detailed logging of function calls, arguments, and execution paths (server.py:454-921)
-- **Dual logging system**: Both stderr debug messages and standard Python logging for comprehensive diagnostics
-- **Error context preservation**: All exceptions include debug output with full context for troubleshooting
-- **Claude Desktop integration debugging**: stderr output appears in Claude Desktop logs for real-time troubleshooting
+- Output truncation to prevent token limit exceeded errors (server.py:50-65)
+- DataFrame column filtering for concise vs verbose output modes (server.py:66-135)
 
 ## HEC-RAS Integration Requirements
 - HEC-RAS installation required at standard location: `C:\Program Files (x86)\HEC\HEC-RAS\`
 - Project paths must point to folders containing `.prj` files
-- Test projects (Muncie, BeaverLake) include complete model components
+- Test projects (Muncie, BeaverLake) include complete model components: geometries, plans, results, terrain data, boundary conditions
 - Environment variables: `HECRAS_VERSION` (default: "6.6"), `HECRAS_PATH` (custom installation path)
-
-## About This Tool
-**RAS Commander MCP** is an open-source, LLM-forward H&H automation tool provided under MIT license by CLB Engineering Corporation. This is third-party software and is not made by or endorsed by USACE HEC. For more Python functionality, see the [ras-commander](https://github.com/gpt-cmdr/ras-commander) repository.
 ==================================================
 
 File: c:\GH\ras-commander-mcp-main\claude_desktop_config.json
@@ -159,11 +137,8 @@ File: c:\GH\ras-commander-mcp-main\claude_desktop_config.json
 {
   "mcpServers": {
     "hecras": {
-      "command": "uvx",
-      "args": [
-        "--from", "ras-commander-mcp@git+https://github.com/gpt-cmdr/ras-commander-mcp.git",
-        "ras-commander-mcp"
-      ],
+      "command": "C:\\Users\\billk\\anaconda3\\envs\\claude_test_env\\python.exe",
+      "args": ["C:\\GH\\ras-commander-mcp\\server.py"],
       "env": {
         "HECRAS_VERSION": "6.6"
       }
@@ -406,46 +381,6 @@ File: c:\GH\ras-commander-mcp-main\package.json
 }
 ==================================================
 
-File: c:\GH\ras-commander-mcp-main\pyproject.toml
-==================================================
-[project]
-name = "ras-commander-mcp"
-version = "0.1.0"
-description = "MCP server for HEC-RAS project interaction via ras-commander"
-readme = "README.md"
-license = {text = "MIT"}
-authors = [{name = "CLB Engineering Corporation", email = "info@clbengineering.com"}]
-requires-python = ">=3.10"
-dependencies = [
-    "mcp>=1.0.0",
-    "ras-commander>=0.1.0",
-    "pandas>=1.3.0",
-    "h5py>=3.0.0"
-]
-
-[project.urls]
-Homepage = "https://github.com/gpt-cmdr/ras-commander-mcp"
-Documentation = "https://github.com/gpt-cmdr/ras-commander"
-Repository = "https://github.com/gpt-cmdr/ras-commander-mcp.git"
-"Company" = "https://clbengineering.com/"
-
-[project.scripts]
-ras-commander-mcp = "server:run"
-
-[build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
-
-[tool.uv]
-dev-dependencies = [
-    "pytest>=7.0.0",
-    "pytest-asyncio>=0.20.0"
-]
-
-[tool.hatch.build.targets.wheel]
-packages = ["."]
-==================================================
-
 File: c:\GH\ras-commander-mcp-main\README.md
 ==================================================
 # HEC-RAS MCP Server
@@ -454,17 +389,13 @@ File: c:\GH\ras-commander-mcp-main\README.md
   <img src="ras_commander_mcp_logo.svg" alt="RAS Commander MCP Logo" width="70%">
 </div>  
 
+
 The RAS Commander MCP (Model Context Protocol) server provides tools for querying HEC-RAS project information using the ras-commander library. This allows Claude Desktop to interact with HEC-RAS hydraulic modeling projects.
-
-**RAS Commander MCP** is an open-source, LLM-forward H&H automation tool provided under MIT license by [CLB Engineering Corporation](https://clbengineering.com/). This is third-party software and is not made by or endorsed by the U.S. Army Corps of Engineers (USACE) Hydrologic Engineering Center (HEC).
-
-For a demonstration of CLB's H&H automation services, contact us at info@clbengineering.com
 
 ## Features
 
 - Query comprehensive HEC-RAS project information (plans, geometries, flows, boundaries)
-- Extract detailed plan results including unsteady simulation info and runtime metrics
-- Explore HDF file structures and extract computation messages
+- Get specific components (plans only, geometries only)
 - Support for multiple HEC-RAS versions (6.5, 6.6, etc.)
 - Formatted text output suitable for LLM interaction
 - Error handling with helpful diagnostics
@@ -472,41 +403,28 @@ For a demonstration of CLB's H&H automation services, contact us at info@clbengi
 ## Prerequisites
 
 1. **HEC-RAS Installation**: HEC-RAS must be installed on your system (default expects version 6.6)
-2. **Python**: Python 3.10+
+2. **Python**: Python 3.8+ with Anaconda recommended
 3. **Claude Desktop**: For MCP integration
-4. **uv**: Python package manager (recommended)
 
 ## Installation
 
-### Using uv (Recommended)
-
-1. Install uv if you haven't already:
-```bash
-# Windows (PowerShell)
-powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
-
-# macOS/Linux
-curl -LsSf https://astral.sh/uv/install.sh | sh
-```
-
-2. Clone this repository:
+1. Clone this repository:
 ```bash
 git clone <repository-url>
 cd ras-commander-mcp
 ```
 
-3. The dependencies will be automatically installed when you run the server with uvx (see Configuration below).
-
-### Using pip (Alternative)
-
-If you prefer to use pip:
+2. Install dependencies using the Anaconda environment:
 ```bash
-pip install mcp ras-commander pandas
+# Create and activate conda environment
+conda create -n hecras-mcp python=3.9
+conda activate hecras-mcp
+pip install -r requirements.txt
 ```
 
 ## Configuration
 
-### Claude Desktop Integration with uvx (Recommended)
+### Claude Desktop Integration
 
 Add the following to your Claude Desktop configuration file (`claude_desktop_config.json`):
 
@@ -514,51 +432,26 @@ Add the following to your Claude Desktop configuration file (`claude_desktop_con
 {
   "mcpServers": {
     "hecras": {
-      "command": "uvx",
-      "args": [
-        "--from", "ras-commander-mcp@git+https://github.com/gpt-cmdr/ras-commander-mcp.git",
-        "ras-commander-mcp"
-      ],
-      "env": {
-        "HECRAS_VERSION": "6.6"
-      }
+      "command": "python",
+      "args": ["path/to/your/ras-commander-mcp/server.py"]
     }
   }
 }
 ```
 
-### Alternative: Using Local Installation
-
-If you've cloned the repository locally and want to run from source:
-
-```json
-{
-  "mcpServers": {
-    "hecras": {
-      "command": "uv",
-      "args": ["run", "python", "path/to/your/ras-commander-mcp/server.py"],
-      "env": {
-        "HECRAS_VERSION": "6.6"
-      }
-    }
-  }
-}
-```
+Adjust the paths to match your installation and Python environment.
 
 ### HEC-RAS Version Configuration
 
-The MCP server uses HEC-RAS version 6.6 by default. To use a different version:
+The MCP server uses HEC-RAS version 6.6 by default. This version is NOT passed directly in tool calls but is configured at the server level. To use a different version of HEC-RAS:
 
 1. **Set HEC-RAS Version** (if you have a different version installed):
    ```json
    {
      "mcpServers": {
        "hecras": {
-         "command": "uvx",
-         "args": [
-           "--from", "ras-commander-mcp@git+https://github.com/gpt-cmdr/ras-commander-mcp.git",
-           "ras-commander-mcp"
-         ],
+         "command": "python",
+         "args": ["path/to/your/ras-commander-mcp/server.py"],
          "env": {
            "HECRAS_VERSION": "6.5"
          }
@@ -572,11 +465,8 @@ The MCP server uses HEC-RAS version 6.6 by default. To use a different version:
    {
      "mcpServers": {
        "hecras": {
-         "command": "uvx",
-         "args": [
-           "--from", "ras-commander-mcp@git+https://github.com/gpt-cmdr/ras-commander-mcp.git",
-           "ras-commander-mcp"
-         ],
+         "command": "python",
+         "args": ["path/to/your/ras-commander-mcp/server.py"],
          "env": {
            "HECRAS_PATH": "C:\\Program Files\\HEC\\HEC-RAS\\6.5\\HEC-RAS.exe"
          }
@@ -585,48 +475,53 @@ The MCP server uses HEC-RAS version 6.6 by default. To use a different version:
    }
    ```
 
+**Important**: If you encounter errors about HEC-RAS not being found, ensure that:
+- HEC-RAS 6.6 is installed in the default location, OR
+- Change the configuration to match your installed HEC-RAS version using the `HECRAS_VERSION` environment variable, OR
+- Specify the full path to your HEC-RAS executable using the `HECRAS_PATH` environment variable
+
 ## Usage
 
 ### Available Tools
 
-All tools provided by this MCP server leverage the [ras-commander](https://github.com/gpt-cmdr/ras-commander) Python library for advanced HEC-RAS automation capabilities.
-
-1. **hecras_project_summary**: Get comprehensive or selective project information
+1. **query_hecras_project**: Get comprehensive project information
    - Parameters:
      - `project_path` (required): Full path to HEC-RAS project folder
-     - `show_rasprj` (optional): Show project file contents (default: true)
-     - `show_plan_df` (optional): Show plan files and metadata (default: true)
-     - `show_geom_df` (optional): Show geometry files (default: true)
-     - `show_flow_df` (optional): Show steady flow data (default: true)
-     - `show_unsteady_df` (optional): Show unsteady flow data (default: true)
-     - `show_boundaries` (optional): Show boundary conditions (default: true)
-     - `show_rasmap` (optional): Show RASMapper configuration (default: false)
-     - `showmore` (optional): Show all columns/verbose mode (default: false)
+     - `include_boundaries` (optional): Include boundary conditions (default: false)
 
-2. **read_plan_description**: Read multi-line description from a plan file
+2. **get_hecras_plans**: Get only plan information
    - Parameters:
      - `project_path` (required): Full path to HEC-RAS project folder
-     - `plan_number` (required): Plan number (e.g., '1', '01', '02')
 
-3. **get_plan_results_summary**: Get comprehensive results from a specific plan
+3. **get_hecras_geometries**: Get only geometry information
    - Parameters:
      - `project_path` (required): Full path to HEC-RAS project folder
-     - `plan_number` (required): Plan number or full path to plan HDF file
 
-4. **get_compute_messages**: Get computation messages and performance metrics
+4. **get_infiltration_data**: Get infiltration layer data and soil statistics
    - Parameters:
      - `project_path` (required): Full path to HEC-RAS project folder
-     - `plan_number` (required): Plan number or full path to plan HDF file
+     - `significant_threshold` (optional): Minimum percentage threshold for significant mukeys (default: 1.0)
 
-5. **get_hdf_structure**: Explore HDF file structure
+5. **get_plan_results_summary**: Get comprehensive results from a specific plan
+   - Parameters:
+     - `project_path` (required): Full path to HEC-RAS project folder
+     - `plan_number` (required): Plan number (e.g., '1', '01', '02') or full path to plan HDF file
+
+6. **get_compute_messages**: Get computation messages and performance metrics
+   - Parameters:
+     - `project_path` (required): Full path to HEC-RAS project folder
+     - `plan_number` (required): Plan number (e.g., '1', '01', '02') or full path to plan HDF file
+
+7. **get_hdf_structure**: Explore the structure of a HEC-RAS HDF file
    - Parameters:
      - `hdf_path` (required): Full path to the HDF file
      - `group_path` (optional): Internal HDF path to start exploration from (default: "/")
-     - `paths_only` (optional): Show only paths without details (default: false)
 
-6. **get_projection_info**: Get spatial projection information (WKT)
+8. **get_projection_info**: Get spatial projection information from HDF files
    - Parameters:
      - `hdf_path` (required): Full path to the HDF file
+
+**Note**: The HEC-RAS version is configured at the server level (see Configuration section above) and is not passed as a parameter to individual tool calls.
 
 ### Example Usage in Claude
 
@@ -634,53 +529,47 @@ Once configured, you can ask Claude:
 
 - "Query the HEC-RAS project at C:/Projects/MyRiverModel"
 - "Show me the plans in the Muncie test project"
-- "Get the results summary for plan '01' in my project"
-- "Show me the compute messages for plan '1'"
+- "Get the geometries from my HEC-RAS model"
+- "Show me the results summary for plan '01' in my project"
+- "Show me the compute messages for plan '1' in my project"
+- "Get the computation performance metrics from the last simulation"
 - "Explore the HDF structure of my results file"
 - "Get the projection info from my terrain HDF"
 
-## Python Library Reference
+### Testing
 
-This MCP server is built on top of the [ras-commander](https://github.com/gpt-cmdr/ras-commander) Python library, which provides comprehensive programmatic access to HEC-RAS projects. For advanced Python scripting and automation beyond what's available through the MCP interface, refer to the ras-commander documentation.
-
-## Testing
-
-### Using uv
-
-Run the test suite from the project directory:
+Run the example client to test the server:
 
 ```bash
-# Run all tests
-uv run python tests/test_all_tools.py
-
-# Test single tool
-uv run python tests/test_single_tool.py
-
-# Test server functionality
-uv run python tests/test_server.py
+# Using the activated conda environment
+python example_client.py
 ```
 
-### Test Data
+This will query the included Muncie test data and display the results.
 
-The `testdata/` folder contains complete HEC-RAS projects for testing:
-- `Muncie/`: Complete project with terrain, results, and boundary conditions
-- `BeaverLake/`: Additional test project
+## Test Data
+
+The `testdata/Muncie/` folder contains a complete HEC-RAS project for testing, including:
+- HDF5 result files
+- Terrain data
+- Geometry files
+- Plan files
+- Boundary conditions
+- GIS shapefiles
 
 ## Troubleshooting
 
-1. **ImportError for ras-commander**: Ensure HEC-RAS is properly installed
+1. **ImportError for ras-commander**: Ensure ras-commander is installed and HEC-RAS is properly installed
 2. **Project not found**: Verify the project path exists and contains .prj files
 3. **Version errors**: Check that the specified HEC-RAS version matches your installation
-4. **MCP connection issues**: Verify Claude Desktop configuration and restart Claude
 
 ## Development
 
 To modify or extend the server:
 
-1. Clone the repository
-2. Make changes to `server.py`
-3. Test with: `uv run python tests/test_all_tools.py`
-4. Update Claude Desktop configuration if needed
+1. Edit `server.py` to add new tools or modify existing ones
+2. Test changes with `example_client.py`
+3. Update Claude Desktop configuration if paths change
 
 ## License
 
@@ -689,12 +578,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## Trademarks
 
 See [TRADEMARKS.md](TRADEMARKS.md) for trademark information and compliance policies.
-
-## About
-
-**RAS Commander MCP** is developed and maintained by [CLB Engineering Corporation](https://clbengineering.com/) as part of our commitment to advancing H&H automation through open-source tools.
-
-For professional H&H automation services and custom solutions, contact us at info@clbengineering.com
 ==================================================
 
 File: c:\GH\ras-commander-mcp-main\requirements.txt
@@ -718,63 +601,30 @@ import asyncio
 import json
 import logging
 import os
-import sys
 from pathlib import Path
 from typing import Any, Sequence
 import pandas as pd
 import io
 
-# Add stderr logging for debugging
-def debug_print(msg: str):
-    """Print debug message to stderr for MCP debugging."""
-    print(f"[DEBUG] {msg}", file=sys.stderr, flush=True)
-
-debug_print("Starting HEC-RAS MCP Server imports...")
-
-try:
-    from mcp.server.models import InitializationOptions
-    from mcp.server import NotificationOptions, Server
-    from mcp.server.stdio import stdio_server
-    from mcp.types import Tool, TextContent
-    debug_print("MCP imports successful")
-except Exception as e:
-    debug_print(f"Error importing MCP modules: {e}")
-    sys.exit(1)
+from mcp.server.models import InitializationOptions
+from mcp.server import NotificationOptions, Server
+from mcp.server.stdio import stdio_server
+from mcp.types import Tool, TextContent
 
 # Import ras-commander
 try:
     from ras_commander import init_ras_project, HdfBase, HdfResultsPlan, RasPlan
     import h5py
     import numpy as np
-    debug_print("ras-commander imports successful")
-except ImportError as e:
-    debug_print(f"Error importing ras-commander: {e}")
-    debug_print("ras-commander is not installed. Please install it with: pip install ras-commander")
+except ImportError:
     raise ImportError("ras-commander is not installed. Please install it with: pip install ras-commander")
-except Exception as e:
-    debug_print(f"Unexpected error importing modules: {e}")
-    raise
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Also add a stderr handler for the logger
-stderr_handler = logging.StreamHandler(sys.stderr)
-stderr_handler.setLevel(logging.DEBUG)
-formatter = logging.Formatter('[%(levelname)s] %(name)s: %(message)s')
-stderr_handler.setFormatter(formatter)
-logger.addHandler(stderr_handler)
-
-debug_print("Creating MCP server instance...")
-
 # Initialize the MCP server
-try:
-    server = Server("hecras-mcp-server")
-    debug_print("MCP server instance created successfully")
-except Exception as e:
-    debug_print(f"Error creating server instance: {e}")
-    raise
+server = Server("hecras-mcp-server")
 
 # Configuration
 DEFAULT_RAS_VERSION = "6.6"
@@ -782,8 +632,6 @@ DEFAULT_RAS_VERSION = "6.6"
 HECRAS_VERSION = os.environ.get("HECRAS_VERSION", DEFAULT_RAS_VERSION)
 # Allow specifying a direct path to HEC-RAS executable
 HECRAS_PATH = os.environ.get("HECRAS_PATH", None)
-
-debug_print(f"Configuration: HECRAS_VERSION={HECRAS_VERSION}, HECRAS_PATH={HECRAS_PATH}")
 
 def get_ras_version_info():
     """Get the configured HEC-RAS version or path for display."""
@@ -992,687 +840,628 @@ def dataframe_to_text(df: pd.DataFrame, name: str, df_type: str = None, showmore
 
 @server.list_tools()
 async def handle_list_tools() -> list[Tool]:
-    """
-    List available tools for HEC-RAS project interaction.
-    
-    RAS Commander MCP is an open-source, LLM-forward H&H automation tool 
-    provided under MIT license by CLB Engineering Corporation (https://clbengineering.com/).
-    This is third-party software and is not made by or endorsed by USACE HEC.
-    
-    For advanced Python automation capabilities, see: https://github.com/gpt-cmdr/ras-commander
-    For H&H automation services demonstration, contact: info@clbengineering.com
-    """
-    debug_print("handle_list_tools called")
-    try:
-        tools = [
-            Tool(
-                name="hecras_project_summary",
-                description="Get comprehensive or selective HEC-RAS project information. Built on the ras-commander library (https://github.com/gpt-cmdr/ras-commander) for advanced HEC-RAS automation.",
-                inputSchema={
-                    "type": "object",
-                    "properties": {
-                        "project_path": {
-                            "type": "string",
-                            "description": "Full path to the HEC-RAS project folder"
-                        },
-                        "show_rasprj": {
-                            "type": "boolean",
-                            "description": "Show project file contents",
-                            "default": True
-                        },
-                        "show_plan_df": {
-                            "type": "boolean",
-                            "description": "Show plan files and metadata",
-                            "default": True
-                        },
-                        "show_geom_df": {
-                            "type": "boolean",
-                            "description": "Show geometry files",
-                            "default": True
-                        },
-                        "show_flow_df": {
-                            "type": "boolean",
-                            "description": "Show steady flow data",
-                            "default": True
-                        },
-                        "show_unsteady_df": {
-                            "type": "boolean",
-                            "description": "Show unsteady flow data",
-                            "default": True
-                        },
-                        "show_boundaries": {
-                            "type": "boolean",
-                            "description": "Show boundary conditions",
-                            "default": True
-                        },
-                        "show_rasmap": {
-                            "type": "boolean",
-                            "description": "Show RASMapper configuration",
-                            "default": False
-                        },
-                        "showmore": {
-                            "type": "boolean",
-                            "description": "Show all columns (verbose mode)",
-                            "default": False
-                        }
+    """List available tools."""
+    return [
+        Tool(
+            name="hecras_project_summary",
+            description="Get comprehensive or selective HEC-RAS project information",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "project_path": {
+                        "type": "string",
+                        "description": "Full path to the HEC-RAS project folder"
                     },
-                    "required": ["project_path"]
-                }
-            ),
-            Tool(
-                name="read_plan_description",
-                description="Read the multi-line description block from a HEC-RAS plan file. Part of the RAS Commander MCP suite by CLB Engineering Corporation.",
-                inputSchema={
-                    "type": "object",
-                    "properties": {
-                        "project_path": {
-                            "type": "string",
-                            "description": "Full path to the HEC-RAS project folder"
-                        },
-                        "plan_number": {
-                            "type": "string",
-                            "description": "Plan number (e.g., '1', '01', '02') or full path to plan file"
-                        }
+                    "show_rasprj": {
+                        "type": "boolean",
+                        "description": "Show project file contents",
+                        "default": True
                     },
-                    "required": ["project_path", "plan_number"]
-                }
-            ),
-            Tool(
-                name="get_plan_results_summary",
-                description="Get comprehensive results summary from a HEC-RAS plan including unsteady info, volume accounting, and runtime data. Powered by ras-commander library.",
-                inputSchema={
-                    "type": "object",
-                    "properties": {
-                        "project_path": {
-                            "type": "string",
-                            "description": "Full path to the HEC-RAS project folder"
-                        },
-                        "plan_number": {
-                            "type": "string",
-                            "description": "Plan number (e.g., '1', '01', '02') or full path to plan HDF file. Single digits will be zero-padded."
-                        }
+                    "show_plan_df": {
+                        "type": "boolean",
+                        "description": "Show plan files and metadata",
+                        "default": True
                     },
-                    "required": ["project_path", "plan_number"]
-                }
-            ),
-            Tool(
-                name="get_hdf_structure",
-                description="Explore the structure of a HEC-RAS HDF file. CAUTION: Use on 3rd level data structures or deeper to avoid output truncation. Part of RAS Commander MCP by CLB Engineering.",
-                inputSchema={
-                    "type": "object",
-                    "properties": {
-                        "hdf_path": {
-                            "type": "string",
-                            "description": "Full path to the HDF file"
-                        },
-                        "group_path": {
-                            "type": "string",
-                            "description": "Internal HDF path to start exploration from",
-                            "default": "/"
-                        },
-                        "paths_only": {
-                            "type": "boolean",
-                            "description": "If true, only show group paths without datasets/attributes/details. More appropriate for exploratory queries to understand file structure.",
-                            "default": False
-                        }
+                    "show_geom_df": {
+                        "type": "boolean",
+                        "description": "Show geometry files",
+                        "default": True
                     },
-                    "required": ["hdf_path"]
-                }
-            ),
-            Tool(
-                name="get_projection_info",
-                description="Get spatial projection information (WKT string) from a HEC-RAS HDF file. Built with ras-commander for advanced geospatial capabilities.",
-                inputSchema={
-                    "type": "object",
-                    "properties": {
-                        "hdf_path": {
-                            "type": "string",
-                            "description": "Full path to the HDF file"
-                        }
+                    "show_flow_df": {
+                        "type": "boolean",
+                        "description": "Show steady flow data",
+                        "default": True
                     },
-                    "required": ["hdf_path"]
-                }
-            ),
-            Tool(
-                name="get_compute_messages",
-                description="Get computation messages and performance metrics from a HEC-RAS plan. RAS Commander MCP - professional H&H automation by CLB Engineering Corporation.",
-                inputSchema={
-                    "type": "object",
-                    "properties": {
-                        "project_path": {
-                            "type": "string",
-                            "description": "Full path to the HEC-RAS project folder"
-                        },
-                        "plan_number": {
-                            "type": "string",
-                            "description": "Plan number (e.g., '1', '01', '02') or full path to plan HDF file. Single digits will be zero-padded."
-                        }
+                    "show_unsteady_df": {
+                        "type": "boolean",
+                        "description": "Show unsteady flow data",
+                        "default": True
                     },
-                    "required": ["project_path", "plan_number"]
-                }
-            )
-        ]
-        debug_print(f"Returning {len(tools)} tools")
-        return tools
-    except Exception as e:
-        debug_print(f"Error in handle_list_tools: {e}")
-        raise
+                    "show_boundaries": {
+                        "type": "boolean",
+                        "description": "Show boundary conditions",
+                        "default": True
+                    },
+                    "show_rasmap": {
+                        "type": "boolean",
+                        "description": "Show RASMapper configuration",
+                        "default": False
+                    },
+                    "showmore": {
+                        "type": "boolean",
+                        "description": "Show all columns (verbose mode)",
+                        "default": False
+                    }
+                },
+                "required": ["project_path"]
+            }
+        ),
+        Tool(
+            name="read_plan_description",
+            description="Read the multi-line description block from a HEC-RAS plan file",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "project_path": {
+                        "type": "string",
+                        "description": "Full path to the HEC-RAS project folder"
+                    },
+                    "plan_number": {
+                        "type": "string",
+                        "description": "Plan number (e.g., '1', '01', '02') or full path to plan file"
+                    }
+                },
+                "required": ["project_path", "plan_number"]
+            }
+        ),
+        Tool(
+            name="get_plan_results_summary",
+            description="Get comprehensive results summary from a HEC-RAS plan including unsteady info, volume accounting, and runtime data. Accepts plan numbers (e.g., '1' or '01') or full HDF path.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "project_path": {
+                        "type": "string",
+                        "description": "Full path to the HEC-RAS project folder"
+                    },
+                    "plan_number": {
+                        "type": "string",
+                        "description": "Plan number (e.g., '1', '01', '02') or full path to plan HDF file. Single digits will be zero-padded."
+                    }
+                },
+                "required": ["project_path", "plan_number"]
+            }
+        ),
+        Tool(
+            name="get_hdf_structure",
+            description="Explore the structure of a HEC-RAS HDF file showing groups, datasets, attributes, shapes, and dtypes. CAUTION: Use on 3rd level data structures or deeper (e.g., /Event Conditions/Unsteady/Boundary Conditions) to avoid output truncation.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "hdf_path": {
+                        "type": "string",
+                        "description": "Full path to the HDF file"
+                    },
+                    "group_path": {
+                        "type": "string",
+                        "description": "Internal HDF path to start exploration from",
+                        "default": "/"
+                    },
+                    "paths_only": {
+                        "type": "boolean",
+                        "description": "If true, only show group paths without datasets/attributes/details. More appropriate for exploratory queries to understand file structure.",
+                        "default": False
+                    }
+                },
+                "required": ["hdf_path"]
+            }
+        ),
+        Tool(
+            name="get_projection_info",
+            description="Get spatial projection information (WKT string) from a HEC-RAS HDF file",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "hdf_path": {
+                        "type": "string",
+                        "description": "Full path to the HDF file"
+                    }
+                },
+                "required": ["hdf_path"]
+            }
+        ),
+        Tool(
+            name="get_compute_messages",
+            description="Get computation messages and performance metrics from a HEC-RAS plan including timing, tasks completed, and computation speeds. Accepts plan numbers (e.g., '1' or '01') or full HDF path.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "project_path": {
+                        "type": "string",
+                        "description": "Full path to the HEC-RAS project folder"
+                    },
+                    "plan_number": {
+                        "type": "string",
+                        "description": "Plan number (e.g., '1', '01', '02') or full path to plan HDF file. Single digits will be zero-padded."
+                    }
+                },
+                "required": ["project_path", "plan_number"]
+            }
+        )
+    ]
 
 @server.call_tool()
 async def handle_call_tool(name: str, arguments: Any) -> Sequence[TextContent]:
     """Handle tool calls."""
-    debug_print(f"handle_call_tool called with: {name}")
-    debug_print(f"Arguments: {arguments}")
     
-    try:
-        if name == "hecras_project_summary":
-            try:
-                project_path = Path(arguments["project_path"])
-                show_rasprj = arguments.get("show_rasprj", True)
-                show_plan_df = arguments.get("show_plan_df", True)
-                show_geom_df = arguments.get("show_geom_df", True)
-                show_flow_df = arguments.get("show_flow_df", True)
-                show_unsteady_df = arguments.get("show_unsteady_df", True)
-                show_boundaries = arguments.get("show_boundaries", True)
-                show_rasmap = arguments.get("show_rasmap", False)
-                showmore = arguments.get("showmore", False)
-                
-                # Use configured version or path
-                ras_version = HECRAS_PATH if HECRAS_PATH else HECRAS_VERSION
-                
-                # Validate project path
-                if not project_path.exists() or not project_path.is_dir():
-                    return [TextContent(
-                        type="text",
-                        text=f"Error: The specified project folder does not exist or is not a directory: {project_path}"
-                    )]
-                
-                # Initialize the RAS project
-                logger.info(f"Initializing HEC-RAS project at: {project_path}")
-                ras = init_ras_project(project_path, ras_version)
-                
-                # Build the response
-                response_parts = [
-                    f"HEC-RAS Project: {ras.project_name}",
-                    f"Project Path: {project_path}",
-                    get_ras_version_info(),
-                    "=" * 80
-                ]
-                
-                # Add project file contents if requested
-                if show_rasprj and hasattr(ras, 'prj_file') and ras.prj_file:
-                    try:
-                        with open(ras.prj_file, 'r', encoding='utf-8') as f:
-                            prj_content = f.read()
-                        
-                        # Filter out lines that start with specific patterns
-                        excluded_prefixes = [
-                            'Geom File=', 'Flow File=', 'Unsteady File=', 'Plan File=',
-                            'DSS Export Filename=', 'DSS Export Rating Curves=', 'DSS Export Rating Curve Sorted=',
-                            'DSS Export Volume Flow Curves=', 'DXF Filename=', 'DXF OffsetX=', 'DXF OffsetY=',
-                            'DXF ScaleX=', 'DXF ScaleY=', 'GIS Export Profiles='
-                        ]
-                        filtered_lines = []
-                        
-                        for line in prj_content.splitlines():
-                            if not any(line.strip().startswith(prefix) for prefix in excluded_prefixes):
-                                filtered_lines.append(line)
-                        
-                        response_parts.append("\nPROJECT FILE CONTENTS (.prj):")
-                        response_parts.append("-" * 40)
-                        response_parts.append('\n'.join(filtered_lines))
-                        response_parts.append("=" * 80)
-                    except Exception as e:
-                        logger.error(f"Error reading project file: {str(e)}")
-                        response_parts.append("\nPROJECT FILE: Error reading file")
-                        response_parts.append("=" * 80)
-                
-                # Add plan information
-                if show_plan_df and hasattr(ras, 'plan_df') and ras.plan_df is not None:
-                    response_parts.append(dataframe_to_text(ras.plan_df, "PLANS", "plan_df", showmore))
-                
-                # Add geometry information
-                if show_geom_df and hasattr(ras, 'geom_df') and ras.geom_df is not None:
-                    response_parts.append(dataframe_to_text(ras.geom_df, "GEOMETRIES", "geom_df", showmore))
-                
-                # Add flow information
-                if show_flow_df and hasattr(ras, 'flow_df') and ras.flow_df is not None:
-                    response_parts.append(dataframe_to_text(ras.flow_df, "STEADY FLOWS", "flow_df", showmore))
-                    
-                if show_unsteady_df and hasattr(ras, 'unsteady_df') and ras.unsteady_df is not None:
-                    response_parts.append(dataframe_to_text(ras.unsteady_df, "UNSTEADY FLOWS", "unsteady_df", showmore))
-                
-                # Add boundary conditions if requested
-                if show_boundaries and hasattr(ras, 'boundaries_df') and ras.boundaries_df is not None:
-                    response_parts.append(dataframe_to_text(ras.boundaries_df, "BOUNDARY CONDITIONS", "boundaries_df", showmore))
-                
-                # Add RASMapper information if requested
-                if show_rasmap and hasattr(ras, 'rasmap_df') and ras.rasmap_df is not None:
-                    response_parts.append(dataframe_to_text(ras.rasmap_df, "RASMAP CONFIGURATION", "rasmap_df", showmore))
-                
+    if name == "hecras_project_summary":
+        try:
+            project_path = Path(arguments["project_path"])
+            show_rasprj = arguments.get("show_rasprj", True)
+            show_plan_df = arguments.get("show_plan_df", True)
+            show_geom_df = arguments.get("show_geom_df", True)
+            show_flow_df = arguments.get("show_flow_df", True)
+            show_unsteady_df = arguments.get("show_unsteady_df", True)
+            show_boundaries = arguments.get("show_boundaries", True)
+            show_rasmap = arguments.get("show_rasmap", False)
+            showmore = arguments.get("showmore", False)
+            
+            # Use configured version or path
+            ras_version = HECRAS_PATH if HECRAS_PATH else HECRAS_VERSION
+            
+            # Validate project path
+            if not project_path.exists() or not project_path.is_dir():
                 return [TextContent(
                     type="text",
-                    text=truncate_output("\n".join(response_parts))
+                    text=f"Error: The specified project folder does not exist or is not a directory: {project_path}"
                 )]
-                
-            except Exception as e:
-                logger.error(f"Error querying HEC-RAS project: {str(e)}")
-                debug_print(f"Error in hecras_project_summary: {e}")
-                return [TextContent(
-                    type="text",
-                    text=f"Error querying HEC-RAS project: {str(e)}\n\nPlease ensure:\n1. The project path is correct\n2. HEC-RAS version is installed at the expected location\n3. The project files are valid"
-                )]
-        
-        
-        elif name == "read_plan_description":
-            try:
-                project_path = Path(arguments["project_path"])
-                plan_number = arguments["plan_number"]
-                
-                # Handle single-digit plan numbers
-                if plan_number.isdigit() and len(plan_number) == 1:
-                    plan_number = plan_number.zfill(2)
-                
-                if not project_path.exists() or not project_path.is_dir():
-                    return [TextContent(
-                        type="text",
-                        text=f"Error: The specified project folder does not exist: {project_path}"
-                    )]
-                
-                # Initialize project to get plan info
-                ras_version = HECRAS_PATH if HECRAS_PATH else HECRAS_VERSION
-                ras = init_ras_project(project_path, ras_version)
-                
-                # Read the plan description
-                description = RasPlan.read_plan_description(plan_number, ras)
-                
-                response_parts = [
-                    f"Plan Description for Plan {plan_number}",
-                    f"Project: {ras.project_name}",
-                    "=" * 80,
-                    "",
-                    description if description else "[No description found]",
-                    ""
-                ]
-                
-                return [TextContent(
-                    type="text",
-                    text="\n".join(response_parts)
-                )]
-                
-            except ValueError as e:
-                logger.error(f"Error reading plan description: {str(e)}")
-                return [TextContent(
-                    type="text",
-                    text=f"Error: Plan '{plan_number}' not found in project"
-                )]
-            except Exception as e:
-                logger.error(f"Error reading plan description: {str(e)}")
-                debug_print(f"Error in read_plan_description: {e}")
-                return [TextContent(
-                    type="text",
-                    text=f"Error reading plan description: {str(e)}"
-                )]
-        
-        elif name == "get_plan_results_summary":
-            try:
-                project_path = Path(arguments["project_path"])
-                plan_number = arguments["plan_number"]
-                
-                # Handle single-digit plan numbers
-                if plan_number.isdigit() and len(plan_number) == 1:
-                    plan_number = plan_number.zfill(2)
-                
-                if not project_path.exists() or not project_path.is_dir():
-                    return [TextContent(
-                        type="text",
-                        text=f"Error: The specified project folder does not exist: {project_path}"
-                    )]
-                
-                # Initialize project to get plan info
-                ras_version = HECRAS_PATH if HECRAS_PATH else HECRAS_VERSION
-                ras = init_ras_project(project_path, ras_version)
-                
-                # Handle plan identification like ras-commander: plan number ("01", "02") or full HDF path
-                plan_hdf_path = None
-                
-                # Check if plan_number is a full path to an HDF file
-                if plan_number.endswith('.hdf') and Path(plan_number).exists():
-                    plan_hdf_path = Path(plan_number)
-                else:
-                    # Assume it's a plan number (01, 02, etc.) - construct HDF path
-                    if hasattr(ras, 'plan_df') and ras.plan_df is not None:
-                        # Look for plan by plan_number
-                        plan_row = ras.plan_df[ras.plan_df['plan_number'] == plan_number]
-                        
-                        if not plan_row.empty and 'HDF_Results_Path' in plan_row.columns:
-                            hdf_rel_path = plan_row['HDF_Results_Path'].iloc[0]
-                            if hdf_rel_path:
-                                plan_hdf_path = project_path / hdf_rel_path
-                    
-                    # If still not found, try direct file construction (common pattern)
-                    if not plan_hdf_path:
-                        # Try common HEC-RAS naming patterns
-                        project_name = project_path.name
-                        potential_paths = [
-                            project_path / f"{project_name}.p{plan_number}.hdf",
-                            project_path / f"*.p{plan_number}.hdf"
-                        ]
-                        
-                        for pattern in potential_paths:
-                            if '*' in str(pattern):
-                                matches = list(project_path.glob(pattern.name))
-                                if matches:
-                                    plan_hdf_path = matches[0]
-                                    break
-                            elif pattern.exists():
-                                plan_hdf_path = pattern
-                                break
-                
-                if not plan_hdf_path or not plan_hdf_path.exists():
-                    return [TextContent(
-                        type="text",
-                        text=f"Error: Plan '{plan_number}' not found or has no results HDF file"
-                    )]
-                
-                response_parts = [
-                    f"Plan Results Summary: {plan_number}",
-                    f"HDF Path: {plan_hdf_path}",
-                    "=" * 80
-                ]
-                
-                # Get unsteady info
+            
+            # Initialize the RAS project
+            logger.info(f"Initializing HEC-RAS project at: {project_path}")
+            ras = init_ras_project(project_path, ras_version)
+            
+            # Build the response
+            response_parts = [
+                f"HEC-RAS Project: {ras.project_name}",
+                f"Project Path: {project_path}",
+                get_ras_version_info(),
+                "=" * 80
+            ]
+            
+            # Add project file contents if requested
+            if show_rasprj and hasattr(ras, 'prj_file') and ras.prj_file:
                 try:
-                    unsteady_info = HdfResultsPlan.get_unsteady_info(plan_hdf_path)
-                    response_parts.append(dataframe_to_text(unsteady_info, "UNSTEADY INFO"))
-                except Exception as e:
-                    response_parts.append(f"\nUnsteady info not available: {str(e)}")
-                
-                # Get unsteady summary
-                try:
-                    unsteady_summary = HdfResultsPlan.get_unsteady_summary(plan_hdf_path)
-                    response_parts.append(dataframe_to_text(unsteady_summary, "UNSTEADY SUMMARY"))
-                except Exception as e:
-                    response_parts.append(f"\nUnsteady summary not available: {str(e)}")
-                
-                # Get volume accounting
-                try:
-                    volume_accounting = HdfResultsPlan.get_volume_accounting(plan_hdf_path)
-                    if volume_accounting is not None:
-                        response_parts.append(dataframe_to_text(volume_accounting, "VOLUME ACCOUNTING"))
-                    else:
-                        response_parts.append("\nVolume accounting not available")
-                except Exception as e:
-                    response_parts.append(f"\nVolume accounting error: {str(e)}")
-                
-                # Get runtime data
-                try:
-                    runtime_data = HdfResultsPlan.get_runtime_data(plan_hdf_path)
-                    if runtime_data is not None:
-                        response_parts.append(dataframe_to_text(runtime_data, "RUNTIME DATA"))
-                    else:
-                        response_parts.append("\nRuntime data not available")
-                except Exception as e:
-                    response_parts.append(f"\nRuntime data error: {str(e)}")
-                
-                return [TextContent(
-                    type="text",
-                    text=truncate_output("\n".join(response_parts))
-                )]
-                
-            except Exception as e:
-                logger.error(f"Error getting plan results summary: {str(e)}")
-                debug_print(f"Error in get_plan_results_summary: {e}")
-                return [TextContent(
-                    type="text",
-                    text=f"Error getting plan results summary: {str(e)}"
-                )]
-        
-        elif name == "get_compute_messages":
-            try:
-                project_path = Path(arguments["project_path"])
-                plan_number = arguments["plan_number"]
-                
-                # Handle single-digit plan numbers
-                if plan_number.isdigit() and len(plan_number) == 1:
-                    plan_number = plan_number.zfill(2)
-                
-                if not project_path.exists() or not project_path.is_dir():
-                    return [TextContent(
-                        type="text",
-                        text=f"Error: The specified project folder does not exist: {project_path}"
-                    )]
-                
-                # Initialize project to get plan info
-                ras_version = HECRAS_PATH if HECRAS_PATH else HECRAS_VERSION
-                ras = init_ras_project(project_path, ras_version)
-                
-                # Handle plan identification (reuse logic from get_plan_results_summary)
-                plan_hdf_path = None
-                
-                # Check if plan_number is a full path to an HDF file
-                if plan_number.endswith('.hdf') and Path(plan_number).exists():
-                    plan_hdf_path = Path(plan_number)
-                else:
-                    # Assume it's a plan number - construct HDF path
-                    if hasattr(ras, 'plan_df') and ras.plan_df is not None:
-                        # Look for plan by plan_number
-                        plan_row = ras.plan_df[ras.plan_df['plan_number'] == plan_number]
-                        
-                        if not plan_row.empty and 'HDF_Results_Path' in plan_row.columns:
-                            hdf_rel_path = plan_row['HDF_Results_Path'].iloc[0]
-                            if hdf_rel_path:
-                                plan_hdf_path = project_path / hdf_rel_path
+                    with open(ras.prj_file, 'r', encoding='utf-8') as f:
+                        prj_content = f.read()
                     
-                    # If still not found, try direct file construction
-                    if not plan_hdf_path:
-                        project_name = project_path.name
-                        potential_paths = [
-                            project_path / f"{project_name}.p{plan_number}.hdf",
-                            project_path / f"*.p{plan_number}.hdf"
-                        ]
-                        
-                        for pattern in potential_paths:
-                            if '*' in str(pattern):
-                                matches = list(project_path.glob(pattern.name))
-                                if matches:
-                                    plan_hdf_path = matches[0]
-                                    break
-                            elif pattern.exists():
-                                plan_hdf_path = pattern
-                                break
-                
-                if not plan_hdf_path or not plan_hdf_path.exists():
-                    return [TextContent(
-                        type="text",
-                        text=f"Error: Plan '{plan_number}' not found or has no results HDF file"
-                    )]
-                
-                # Get compute messages using local implementation
-                compute_messages = get_compute_messages_local(plan_hdf_path)
-                
-                return [TextContent(
-                    type="text",
-                    text=compute_messages
-                )]
-                
-            except Exception as e:
-                logger.error(f"Error getting compute messages: {str(e)}")
-                debug_print(f"Error in get_compute_messages: {e}")
-                return [TextContent(
-                    type="text",
-                    text=f"Error getting compute messages: {str(e)}"
-                )]
-        
-        elif name == "get_hdf_structure":
-            try:
-                hdf_path = Path(arguments["hdf_path"])
-                group_path = arguments.get("group_path", "/")
-                paths_only = arguments.get("paths_only", False)
-                
-                if not hdf_path.exists():
-                    return [TextContent(
-                        type="text",
-                        text=f"Error: The specified HDF file does not exist: {hdf_path}"
-                    )]
-                
-                if paths_only:
-                    # Custom implementation for paths-only exploration
-                    import h5py
-                    paths = []
-                    
-                    def collect_paths(name, obj):
-                        if isinstance(obj, h5py.Group):
-                            paths.append(f"Group: /{name}")
-                        elif isinstance(obj, h5py.Dataset):
-                            paths.append(f"Dataset: /{name}")
-                    
-                    with h5py.File(hdf_path, 'r') as f:
-                        if group_path != "/":
-                            if group_path in f:
-                                f[group_path].visititems(collect_paths)
-                            else:
-                                return [TextContent(
-                                    type="text",
-                                    text=f"Error: Group path '{group_path}' not found in HDF file"
-                                )]
-                        else:
-                            f.visititems(collect_paths)
-                    
-                    response_parts = [
-                        f"HDF File Structure (Paths Only): {hdf_path}",
-                        f"Starting from: {group_path}",
-                        "=" * 80,
-                        "\n".join(sorted(paths))
+                    # Filter out lines that start with specific patterns
+                    excluded_prefixes = [
+                        'Geom File=', 'Flow File=', 'Unsteady File=', 'Plan File=',
+                        'DSS Export Filename=', 'DSS Export Rating Curves=', 'DSS Export Rating Curve Sorted=',
+                        'DSS Export Volume Flow Curves=', 'DXF Filename=', 'DXF OffsetX=', 'DXF OffsetY=',
+                        'DXF ScaleX=', 'DXF ScaleY=', 'GIS Export Profiles='
                     ]
-                else:
-                    # Capture the full structure output
-                    import io
-                    import sys
-                    old_stdout = sys.stdout
-                    sys.stdout = buffer = io.StringIO()
+                    filtered_lines = []
                     
-                    try:
-                        HdfBase.get_dataset_info(hdf_path, group_path)
-                        structure_output = buffer.getvalue()
-                    finally:
-                        sys.stdout = old_stdout
+                    for line in prj_content.splitlines():
+                        if not any(line.strip().startswith(prefix) for prefix in excluded_prefixes):
+                            filtered_lines.append(line)
                     
-                    response_parts = [
-                        f"HDF File Structure: {hdf_path}",
-                        f"Starting from: {group_path}",
-                        "=" * 80,
-                        structure_output
-                    ]
+                    response_parts.append("\nPROJECT FILE CONTENTS (.prj):")
+                    response_parts.append("-" * 40)
+                    response_parts.append('\n'.join(filtered_lines))
+                    response_parts.append("=" * 80)
+                except Exception as e:
+                    logger.error(f"Error reading project file: {str(e)}")
+                    response_parts.append("\nPROJECT FILE: Error reading file")
+                    response_parts.append("=" * 80)
+            
+            # Add plan information
+            if show_plan_df and hasattr(ras, 'plan_df') and ras.plan_df is not None:
+                response_parts.append(dataframe_to_text(ras.plan_df, "PLANS", "plan_df", showmore))
+            
+            # Add geometry information
+            if show_geom_df and hasattr(ras, 'geom_df') and ras.geom_df is not None:
+                response_parts.append(dataframe_to_text(ras.geom_df, "GEOMETRIES", "geom_df", showmore))
+            
+            # Add flow information
+            if show_flow_df and hasattr(ras, 'flow_df') and ras.flow_df is not None:
+                response_parts.append(dataframe_to_text(ras.flow_df, "STEADY FLOWS", "flow_df", showmore))
                 
-                return [TextContent(
-                    type="text",
-                    text=truncate_output("\n".join(response_parts))
-                )]
-                
-            except Exception as e:
-                logger.error(f"Error getting HDF structure: {str(e)}")
-                debug_print(f"Error in get_hdf_structure: {e}")
-                return [TextContent(
-                    type="text",
-                    text=f"Error getting HDF structure: {str(e)}"
-                )]
-        
-        elif name == "get_projection_info":
-            try:
-                hdf_path = Path(arguments["hdf_path"])
-                
-                if not hdf_path.exists():
-                    return [TextContent(
-                        type="text",
-                        text=f"Error: The specified HDF file does not exist: {hdf_path}"
-                    )]
-                
-                projection_wkt = HdfBase.get_projection(hdf_path)
-                
-                response_parts = [
-                    f"Projection Info for: {hdf_path}",
-                    "=" * 80
-                ]
-                
-                if projection_wkt:
-                    response_parts.append(f"\nWKT String:\n{projection_wkt}")
-                else:
-                    response_parts.append("\nNo projection information found")
-                
-                return [TextContent(
-                    type="text",
-                    text=truncate_output("\n".join(response_parts))
-                )]
-                
-            except Exception as e:
-                logger.error(f"Error getting projection info: {str(e)}")
-                debug_print(f"Error in get_projection_info: {e}")
-                return [TextContent(
-                    type="text",
-                    text=f"Error getting projection info: {str(e)}"
-                )]
-        
-        else:
-            debug_print(f"Unknown tool name: {name}")
+            if show_unsteady_df and hasattr(ras, 'unsteady_df') and ras.unsteady_df is not None:
+                response_parts.append(dataframe_to_text(ras.unsteady_df, "UNSTEADY FLOWS", "unsteady_df", showmore))
+            
+            # Add boundary conditions if requested
+            if show_boundaries and hasattr(ras, 'boundaries_df') and ras.boundaries_df is not None:
+                response_parts.append(dataframe_to_text(ras.boundaries_df, "BOUNDARY CONDITIONS", "boundaries_df", showmore))
+            
+            # Add RASMapper information if requested
+            if show_rasmap and hasattr(ras, 'rasmap_df') and ras.rasmap_df is not None:
+                response_parts.append(dataframe_to_text(ras.rasmap_df, "RASMAP CONFIGURATION", "rasmap_df", showmore))
+            
             return [TextContent(
                 type="text",
-                text=f"Error: Unknown tool: {name}"
+                text=truncate_output("\n".join(response_parts))
+            )]
+            
+        except Exception as e:
+            logger.error(f"Error querying HEC-RAS project: {str(e)}")
+            return [TextContent(
+                type="text",
+                text=f"Error querying HEC-RAS project: {str(e)}\n\nPlease ensure:\n1. The project path is correct\n2. HEC-RAS version is installed at the expected location\n3. The project files are valid"
             )]
     
-    except Exception as e:
-        debug_print(f"Unexpected error in handle_call_tool: {e}")
-        logger.error(f"Unexpected error in handle_call_tool: {e}")
+    
+    elif name == "read_plan_description":
+        try:
+            project_path = Path(arguments["project_path"])
+            plan_number = arguments["plan_number"]
+            
+            # Handle single-digit plan numbers
+            if plan_number.isdigit() and len(plan_number) == 1:
+                plan_number = plan_number.zfill(2)
+            
+            if not project_path.exists() or not project_path.is_dir():
+                return [TextContent(
+                    type="text",
+                    text=f"Error: The specified project folder does not exist: {project_path}"
+                )]
+            
+            # Initialize project to get plan info
+            ras_version = HECRAS_PATH if HECRAS_PATH else HECRAS_VERSION
+            ras = init_ras_project(project_path, ras_version)
+            
+            # Read the plan description
+            description = RasPlan.read_plan_description(plan_number, ras)
+            
+            response_parts = [
+                f"Plan Description for Plan {plan_number}",
+                f"Project: {ras.project_name}",
+                "=" * 80,
+                "",
+                description if description else "[No description found]",
+                ""
+            ]
+            
+            return [TextContent(
+                type="text",
+                text="\n".join(response_parts)
+            )]
+            
+        except ValueError as e:
+            logger.error(f"Error reading plan description: {str(e)}")
+            return [TextContent(
+                type="text",
+                text=f"Error: Plan '{plan_number}' not found in project"
+            )]
+        except Exception as e:
+            logger.error(f"Error reading plan description: {str(e)}")
+            return [TextContent(
+                type="text",
+                text=f"Error reading plan description: {str(e)}"
+            )]
+    
+    elif name == "get_plan_results_summary":
+        try:
+            project_path = Path(arguments["project_path"])
+            plan_number = arguments["plan_number"]
+            
+            # Handle single-digit plan numbers
+            if plan_number.isdigit() and len(plan_number) == 1:
+                plan_number = plan_number.zfill(2)
+            
+            if not project_path.exists() or not project_path.is_dir():
+                return [TextContent(
+                    type="text",
+                    text=f"Error: The specified project folder does not exist: {project_path}"
+                )]
+            
+            # Initialize project to get plan info
+            ras_version = HECRAS_PATH if HECRAS_PATH else HECRAS_VERSION
+            ras = init_ras_project(project_path, ras_version)
+            
+            # Handle plan identification like ras-commander: plan number ("01", "02") or full HDF path
+            plan_hdf_path = None
+            
+            # Check if plan_number is a full path to an HDF file
+            if plan_number.endswith('.hdf') and Path(plan_number).exists():
+                plan_hdf_path = Path(plan_number)
+            else:
+                # Assume it's a plan number (01, 02, etc.) - construct HDF path
+                if hasattr(ras, 'plan_df') and ras.plan_df is not None:
+                    # Look for plan by plan_number
+                    plan_row = ras.plan_df[ras.plan_df['plan_number'] == plan_number]
+                    
+                    if not plan_row.empty and 'HDF_Results_Path' in plan_row.columns:
+                        hdf_rel_path = plan_row['HDF_Results_Path'].iloc[0]
+                        if hdf_rel_path:
+                            plan_hdf_path = project_path / hdf_rel_path
+                
+                # If still not found, try direct file construction (common pattern)
+                if not plan_hdf_path:
+                    # Try common HEC-RAS naming patterns
+                    project_name = project_path.name
+                    potential_paths = [
+                        project_path / f"{project_name}.p{plan_number}.hdf",
+                        project_path / f"*.p{plan_number}.hdf"
+                    ]
+                    
+                    for pattern in potential_paths:
+                        if '*' in str(pattern):
+                            matches = list(project_path.glob(pattern.name))
+                            if matches:
+                                plan_hdf_path = matches[0]
+                                break
+                        elif pattern.exists():
+                            plan_hdf_path = pattern
+                            break
+            
+            if not plan_hdf_path or not plan_hdf_path.exists():
+                return [TextContent(
+                    type="text",
+                    text=f"Error: Plan '{plan_number}' not found or has no results HDF file"
+                )]
+            
+            response_parts = [
+                f"Plan Results Summary: {plan_number}",
+                f"HDF Path: {plan_hdf_path}",
+                "=" * 80
+            ]
+            
+            # Get unsteady info
+            try:
+                unsteady_info = HdfResultsPlan.get_unsteady_info(plan_hdf_path)
+                response_parts.append(dataframe_to_text(unsteady_info, "UNSTEADY INFO"))
+            except Exception as e:
+                response_parts.append(f"\nUnsteady info not available: {str(e)}")
+            
+            # Get unsteady summary
+            try:
+                unsteady_summary = HdfResultsPlan.get_unsteady_summary(plan_hdf_path)
+                response_parts.append(dataframe_to_text(unsteady_summary, "UNSTEADY SUMMARY"))
+            except Exception as e:
+                response_parts.append(f"\nUnsteady summary not available: {str(e)}")
+            
+            # Get volume accounting
+            try:
+                volume_accounting = HdfResultsPlan.get_volume_accounting(plan_hdf_path)
+                if volume_accounting is not None:
+                    response_parts.append(dataframe_to_text(volume_accounting, "VOLUME ACCOUNTING"))
+                else:
+                    response_parts.append("\nVolume accounting not available")
+            except Exception as e:
+                response_parts.append(f"\nVolume accounting error: {str(e)}")
+            
+            # Get runtime data
+            try:
+                runtime_data = HdfResultsPlan.get_runtime_data(plan_hdf_path)
+                if runtime_data is not None:
+                    response_parts.append(dataframe_to_text(runtime_data, "RUNTIME DATA"))
+                else:
+                    response_parts.append("\nRuntime data not available")
+            except Exception as e:
+                response_parts.append(f"\nRuntime data error: {str(e)}")
+            
+            return [TextContent(
+                type="text",
+                text=truncate_output("\n".join(response_parts))
+            )]
+            
+        except Exception as e:
+            logger.error(f"Error getting plan results summary: {str(e)}")
+            return [TextContent(
+                type="text",
+                text=f"Error getting plan results summary: {str(e)}"
+            )]
+    
+    elif name == "get_compute_messages":
+        try:
+            project_path = Path(arguments["project_path"])
+            plan_number = arguments["plan_number"]
+            
+            # Handle single-digit plan numbers
+            if plan_number.isdigit() and len(plan_number) == 1:
+                plan_number = plan_number.zfill(2)
+            
+            if not project_path.exists() or not project_path.is_dir():
+                return [TextContent(
+                    type="text",
+                    text=f"Error: The specified project folder does not exist: {project_path}"
+                )]
+            
+            # Initialize project to get plan info
+            ras_version = HECRAS_PATH if HECRAS_PATH else HECRAS_VERSION
+            ras = init_ras_project(project_path, ras_version)
+            
+            # Handle plan identification (reuse logic from get_plan_results_summary)
+            plan_hdf_path = None
+            
+            # Check if plan_number is a full path to an HDF file
+            if plan_number.endswith('.hdf') and Path(plan_number).exists():
+                plan_hdf_path = Path(plan_number)
+            else:
+                # Assume it's a plan number - construct HDF path
+                if hasattr(ras, 'plan_df') and ras.plan_df is not None:
+                    # Look for plan by plan_number
+                    plan_row = ras.plan_df[ras.plan_df['plan_number'] == plan_number]
+                    
+                    if not plan_row.empty and 'HDF_Results_Path' in plan_row.columns:
+                        hdf_rel_path = plan_row['HDF_Results_Path'].iloc[0]
+                        if hdf_rel_path:
+                            plan_hdf_path = project_path / hdf_rel_path
+                
+                # If still not found, try direct file construction
+                if not plan_hdf_path:
+                    project_name = project_path.name
+                    potential_paths = [
+                        project_path / f"{project_name}.p{plan_number}.hdf",
+                        project_path / f"*.p{plan_number}.hdf"
+                    ]
+                    
+                    for pattern in potential_paths:
+                        if '*' in str(pattern):
+                            matches = list(project_path.glob(pattern.name))
+                            if matches:
+                                plan_hdf_path = matches[0]
+                                break
+                        elif pattern.exists():
+                            plan_hdf_path = pattern
+                            break
+            
+            if not plan_hdf_path or not plan_hdf_path.exists():
+                return [TextContent(
+                    type="text",
+                    text=f"Error: Plan '{plan_number}' not found or has no results HDF file"
+                )]
+            
+            # Get compute messages using local implementation
+            compute_messages = get_compute_messages_local(plan_hdf_path)
+            
+            return [TextContent(
+                type="text",
+                text=compute_messages
+            )]
+            
+        except Exception as e:
+            logger.error(f"Error getting compute messages: {str(e)}")
+            return [TextContent(
+                type="text",
+                text=f"Error getting compute messages: {str(e)}"
+            )]
+    
+    elif name == "get_hdf_structure":
+        try:
+            hdf_path = Path(arguments["hdf_path"])
+            group_path = arguments.get("group_path", "/")
+            paths_only = arguments.get("paths_only", False)
+            
+            if not hdf_path.exists():
+                return [TextContent(
+                    type="text",
+                    text=f"Error: The specified HDF file does not exist: {hdf_path}"
+                )]
+            
+            if paths_only:
+                # Custom implementation for paths-only exploration
+                import h5py
+                paths = []
+                
+                def collect_paths(name, obj):
+                    if isinstance(obj, h5py.Group):
+                        paths.append(f"Group: /{name}")
+                    elif isinstance(obj, h5py.Dataset):
+                        paths.append(f"Dataset: /{name}")
+                
+                with h5py.File(hdf_path, 'r') as f:
+                    if group_path != "/":
+                        if group_path in f:
+                            f[group_path].visititems(collect_paths)
+                        else:
+                            return [TextContent(
+                                type="text",
+                                text=f"Error: Group path '{group_path}' not found in HDF file"
+                            )]
+                    else:
+                        f.visititems(collect_paths)
+                
+                response_parts = [
+                    f"HDF File Structure (Paths Only): {hdf_path}",
+                    f"Starting from: {group_path}",
+                    "=" * 80,
+                    "\n".join(sorted(paths))
+                ]
+            else:
+                # Capture the full structure output
+                import io
+                import sys
+                old_stdout = sys.stdout
+                sys.stdout = buffer = io.StringIO()
+                
+                try:
+                    HdfBase.get_dataset_info(hdf_path, group_path)
+                    structure_output = buffer.getvalue()
+                finally:
+                    sys.stdout = old_stdout
+                
+                response_parts = [
+                    f"HDF File Structure: {hdf_path}",
+                    f"Starting from: {group_path}",
+                    "=" * 80,
+                    structure_output
+                ]
+            
+            return [TextContent(
+                type="text",
+                text=truncate_output("\n".join(response_parts))
+            )]
+            
+        except Exception as e:
+            logger.error(f"Error getting HDF structure: {str(e)}")
+            return [TextContent(
+                type="text",
+                text=f"Error getting HDF structure: {str(e)}"
+            )]
+    
+    elif name == "get_projection_info":
+        try:
+            hdf_path = Path(arguments["hdf_path"])
+            
+            if not hdf_path.exists():
+                return [TextContent(
+                    type="text",
+                    text=f"Error: The specified HDF file does not exist: {hdf_path}"
+                )]
+            
+            projection_wkt = HdfBase.get_projection(hdf_path)
+            
+            response_parts = [
+                f"Projection Info for: {hdf_path}",
+                "=" * 80
+            ]
+            
+            if projection_wkt:
+                response_parts.append(f"\nWKT String:\n{projection_wkt}")
+            else:
+                response_parts.append("\nNo projection information found")
+            
+            return [TextContent(
+                type="text",
+                text=truncate_output("\n".join(response_parts))
+            )]
+            
+        except Exception as e:
+            logger.error(f"Error getting projection info: {str(e)}")
+            return [TextContent(
+                type="text",
+                text=f"Error getting projection info: {str(e)}"
+            )]
+    
+    else:
         return [TextContent(
             type="text",
-            text=f"Unexpected error: {str(e)}"
+            text=f"Error: Unknown tool: {name}"
         )]
 
 async def main():
     """Main entry point for the MCP server."""
-    debug_print("Entering main() function")
-    try:
-        async with stdio_server() as (read_stream, write_stream):
-            logger.info("Starting HEC-RAS MCP Server...")
-            logger.info("RAS Commander MCP by CLB Engineering Corporation")
-            logger.info("Built on ras-commander: https://github.com/gpt-cmdr/ras-commander")
-            debug_print("Server starting with stdio streams")
-            
-            await server.run(
-                read_stream,
-                write_stream,
-                InitializationOptions(
-                    server_name="hecras-mcp-server",
-                    server_version="0.1.0",
-                    capabilities=server.get_capabilities(
-                        notification_options=NotificationOptions(),
-                        experimental_capabilities={},
-                    ),
+    async with stdio_server() as (read_stream, write_stream):
+        logger.info("Starting HEC-RAS MCP Server...")
+        
+        await server.run(
+            read_stream,
+            write_stream,
+            InitializationOptions(
+                server_name="hecras-mcp-server",
+                server_version="0.1.0",
+                capabilities=server.get_capabilities(
+                    notification_options=NotificationOptions(),
+                    experimental_capabilities={},
                 ),
-            )
-            debug_print("Server.run completed")
-    except Exception as e:
-        debug_print(f"Error in main(): {e}")
-        logger.error(f"Server error: {e}")
-        raise
-
-# Entry point for console script
-def run():
-    """Entry point for console script."""
-    debug_print("run() function called")
-    try:
-        asyncio.run(main())
-    except KeyboardInterrupt:
-        debug_print("Server interrupted by user")
-        logger.info("Server interrupted by user")
-    except Exception as e:
-        debug_print(f"Fatal error in run(): {e}")
-        logger.error(f"Fatal error: {e}")
-        sys.exit(1)
+            ),
+        )
 
 if __name__ == "__main__":
-    debug_print("__main__ execution started")
-    run()
+    asyncio.run(main())
 ==================================================
 
 File: c:\GH\ras-commander-mcp-main\TRADEMARKS.md
@@ -1699,16 +1488,6 @@ We respect the trademark rights and license terms of USACE and all other rights 
 ## Contact
 
 To raise any trademark or licensing concerns, please open an issue in this repository.
-==================================================
-
-File: c:\GH\ras-commander-mcp-main\__main__.py
-==================================================
-"""Allow the package to be run as a module."""
-import asyncio
-from server import main
-
-if __name__ == "__main__":
-    asyncio.run(main())
 ==================================================
 
 File: c:\GH\ras-commander-mcp-main\ras-commander reference files\api.md
