@@ -21,7 +21,7 @@ from typing import Dict, Any, List, Union
 # Configuration
 OMIT_FOLDERS = [
     "testdata", ".ai_tools", ".git", ".gemini", ".claude", "ArcHydro Default Layers", "Images", "Bald Eagle Creek", "__pycache__", ".git", ".github", "tests", "docs", "library_assistant", "__pycache__", ".conda", "workspace"
-    "build", "dist", "ras_commander.egg-info", "venv", "ras_commander.egg-info", "log_folder", "logs",
+    "build", "dist", "ras_commander.egg-info", "venv", "ras_commander.egg-info", "log_folder", "logs", ".venv",
     "example_projects", "llm_knowledge_bases", "misc", "ai_tools", "FEMA_BLE_Models", "hdf_example_data", "ras_example_categories", "data", "apidocs", "build", "dist", "ras_commander.egg-info", "venv", "log_folder", "logs",
 ]
 OMIT_FILES = [

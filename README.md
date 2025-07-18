@@ -120,14 +120,19 @@ The MCP server uses HEC-RAS version 6.6 by default. This version is NOT passed d
 5. **get_plan_results_summary**: Get comprehensive results from a specific plan
    - Parameters:
      - `project_path` (required): Full path to HEC-RAS project folder
-     - `plan_name` (required): Name of the plan to get results from
+     - `plan_number` (required): Plan number (e.g., '1', '01', '02') or full path to plan HDF file
 
-6. **get_hdf_structure**: Explore the structure of a HEC-RAS HDF file
+6. **get_compute_messages**: Get computation messages and performance metrics
+   - Parameters:
+     - `project_path` (required): Full path to HEC-RAS project folder
+     - `plan_number` (required): Plan number (e.g., '1', '01', '02') or full path to plan HDF file
+
+7. **get_hdf_structure**: Explore the structure of a HEC-RAS HDF file
    - Parameters:
      - `hdf_path` (required): Full path to the HDF file
      - `group_path` (optional): Internal HDF path to start exploration from (default: "/")
 
-7. **get_projection_info**: Get spatial projection information from HDF files
+8. **get_projection_info**: Get spatial projection information from HDF files
    - Parameters:
      - `hdf_path` (required): Full path to the HDF file
 
@@ -140,8 +145,9 @@ Once configured, you can ask Claude:
 - "Query the HEC-RAS project at C:/Projects/MyRiverModel"
 - "Show me the plans in the Muncie test project"
 - "Get the geometries from my HEC-RAS model"
-- "Get infiltration data for my project with a 5% threshold"
-- "Show me the results summary for plan '9-SAs' in my project"
+- "Show me the results summary for plan '01' in my project"
+- "Show me the compute messages for plan '1' in my project"
+- "Get the computation performance metrics from the last simulation"
 - "Explore the HDF structure of my results file"
 - "Get the projection info from my terrain HDF"
 

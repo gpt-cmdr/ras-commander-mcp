@@ -8,7 +8,23 @@
       "Bash(/c/Users/billk/anaconda3/envs/claude_test_env/python.exe example_client.py)",
       "Bash(/c/Users/billk/anaconda3/envs/claude_test_env/python.exe -c \"import mcp; print(mcp.__version__)\")",
       "Bash(/c/Users/billk/anaconda3/envs/claude_test_env/python.exe test_server.py)",
-      "Bash(/c/Users/billk/anaconda3/envs/claude_test_env/python.exe -c \"import ras_commander; print(dir(ras_commander))\")"
+      "Bash(/c/Users/billk/anaconda3/envs/claude_test_env/python.exe -c \"import ras_commander; print(dir(ras_commander))\")",
+      "Bash(mkdir:*)",
+      "Bash(C:Usersbillkanaconda3envsclaude_test_envpython.exe teststest_all_tools.py)",
+      "Bash(\"C:\\Users\\billk\\anaconda3\\envs\\claude_test_env\\python.exe\" teststest_all_tools.py)",
+      "Bash(\"C:\\Users\\billk\\anaconda3\\envs\\claude_test_env\\python.exe\" tests/test_all_tools.py)",
+      "Bash(\"C:\\Users\\billk\\anaconda3\\envs\\claude_test_env\\python.exe\" tests/test_single_tool.py)",
+      "Bash(python:*)",
+      "Bash(\"C:\\Users\\[username]\\anaconda3\\envs\\claude_test_env\\python.exe\" example_client.py)",
+      "Bash(where python)",
+      "Bash(\"C:\\Users\\billk\\AppData\\Local\\Microsoft\\WindowsApps\\python.exe\" example_client.py)",
+      "Bash(uv:*)",
+      "Bash(powershell:*)",
+      "Bash(grep:*)",
+      "Bash(C:Users%USERNAME%anaconda3envsclaude_test_envpython.exe -c \"\nimport asyncio\nimport sys\nfrom pathlib import Path\nsys.path.insert(0, ''.'')\nfrom server import handle_call_tool\n\nasync def test_hdf_structure():\n    result = await handle_call_tool(''get_hdf_structure'', {\n        ''hdf_path'': ''C:\\GH\\ras-commander-mcp-main\\testdata\\BeaverLake\\BeaverLakeSWMMImpor.p01.hdf'',\n        ''group_path'': ''/Results''\n    })\n    print(result[0].text)\n\nasyncio.run(test_hdf_structure())\n\")",
+      "Bash(/c/Users/billk/AppData/Local/Microsoft/WindowsApps/python3 -c \"\nimport asyncio\nimport sys\nfrom pathlib import Path\nsys.path.insert(0, ''.'')\nfrom server import handle_call_tool\n\nasync def test_hdf_structure():\n    result = await handle_call_tool(''get_hdf_structure'', {\n        ''hdf_path'': ''C:\\\\GH\\\\ras-commander-mcp-main\\\\testdata\\\\BeaverLake\\\\BeaverLakeSWMMImpor.p01.hdf'',\n        ''group_path'': ''/Results''\n    })\n    print(result[0].text)\n\nasyncio.run(test_hdf_structure())\n\")",
+      "Bash(rm:*)",
+      "Bash(py tests/test_server.py)"
     ],
     "deny": []
   }

@@ -2,53 +2,95 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+**You prefer to read full file contents before editing**
+
 ## Commands
 
 ### Build & Development
 - **Install dependencies**: `pip install -r requirements.txt` or `pip install mcp ras-commander pandas`
 - **Run MCP server**: `python server.py`
-- **Test with example client**: `python example_client.py` (update project_path in the file first)
 - **Python environment**: Use Anaconda3 installation in Windows user folder for consistency with ras-commander
+- **Alternative Python**: uv is also installed and can be invoked via PowerShell
 
-### Testing
-- **Test data location**: Use `testdata/Muncie/` folder for testing HEC-RAS functionality
-- **Verify MCP tools**: Run example_client.py to test all three MCP tools
-- **Integration test**: Configure in Claude Desktop and test with actual HEC-RAS queries
+### Testing & Validation
+- **Comprehensive testing**: `python tests/test_all_tools.py` - Tests all MCP tools on both Muncie and BeaverLake projects
+- **Single tool testing**: `python tests/test_single_tool.py` - Modify the script to test specific tools quickly
+- **Direct server testing**: `python tests/test_server.py` - Basic functionality validation
+- **Test data locations**: `testdata/Muncie/` and `testdata/BeaverLake/` contain complete HEC-RAS projects
+- **Test outputs**: Check `tests/outputs/` for markdown reports of tool functionality
+- **Integration testing**: Configure in Claude Desktop and test with actual HEC-RAS queries
+
+### Required Post-Update Testing
+After making changes to the MCP server, run these tests in order:
+1. `python tests/test_server.py` - Verify basic server functionality
+2. `python tests/test_all_tools.py` - Comprehensive tool validation
+3. Review output files in `tests/outputs/` directory
+4. Test Claude Desktop integration with sample queries
+
+## Project Structure
+
+```
+ras-commander-mcp-main/
+├── server.py                    # Main MCP server implementation
+├── package.json                # MCP server configuration
+├── requirements.txt            # Python dependencies
+├── claude_desktop_config.json  # Example Claude Desktop configuration
+├── tests/                      # Testing suite
+│   ├── __init__.py
+│   ├── test_server.py         # Basic server functionality tests
+│   ├── test_all_tools.py      # Comprehensive tool testing suite
+│   ├── test_single_tool.py    # Single tool testing utility
+│   └── outputs/               # Test output markdown files
+├── testdata/
+│   ├── Muncie/                # Complete HEC-RAS project for testing
+│   └── BeaverLake/            # Additional test project
+├── ras-commander reference files/ # API documentation and examples
+└── NonWorking_Tools.md         # Documentation of removed/broken tools
+```
 
 ## Architecture
 
-### MCP Server Pattern
-This repository implements a Model Context Protocol (MCP) server that bridges HEC-RAS hydraulic modeling software with Claude:
+### MCP Server Implementation
+This repository implements a Model Context Protocol (MCP) server that bridges HEC-RAS hydraulic modeling software with Claude Desktop:
 
-1. **server.py**: Async Python MCP server exposing seven tools:
-   - `query_hecras_project`: Comprehensive project info (plans, geometries, flows, boundaries)
-   - `get_hecras_plans`: Plan information only
-   - `get_hecras_geometries`: Geometry information only
-   - `get_infiltration_data`: Infiltration layer data and soil statistics
-   - `get_plan_results_summary`: Plan results including unsteady info, volume accounting, runtime data
-   - `get_hdf_structure`: Explore HDF file structure (groups, datasets, attributes)
-   - `get_projection_info`: Spatial projection information (WKT string) from HDF files
+**Core MCP Tools** (server.py:136-280):
+- `hecras_project_summary`: Comprehensive or selective project information with boolean flags controlling output sections including project file contents, verbosity
+- `read_plan_description`: Extract the multi-line description from a specific plan file
+- `get_plan_results_summary`: Detailed plan results including unsteady simulation info, volume accounting, and runtime performance data (uses `plan_number` parameter)
+- `get_compute_messages`: Computation messages and performance metrics from HEC-RAS simulations with smart truncation (uses `plan_number` parameter)
+- `get_hdf_structure`: HDF file structure exploration with group/dataset details and attributes
+- `get_projection_info`: Spatial projection information (WKT format) extraction from HDF files
 
-2. **Data Flow**:
-   - HEC-RAS project files → ras-commander library → pandas DataFrames → formatted text → Claude
-   - All DataFrames converted to text format for LLM interaction
+**Data Processing Pipeline**:
+1. HEC-RAS project files (.prj, .g*, .p*, .u*, etc.) 
+2. ras-commander library parsing → pandas DataFrames
+3. DataFrame filtering and formatting (server.py:66-135)
+4. Text conversion with truncation limits (server.py:50-65)
+5. Structured output to Claude via MCP protocol
 
-3. **Integration Points**:
-   - Uses `ras_commander.init_ras_project()` to load HEC-RAS projects
-   - Supports HEC-RAS versions 6.5, 6.6 (configurable)
-   - Claude Desktop integration via package.json configuration
+**ras-commander Integration**:
+- Uses `ras_commander.init_ras_project()` for project initialization
+- Leverages `HdfBase`, `HdfResultsPlan` classes for HDF data access
+- Implements `HdfResultsPlan.get_compute_messages()` for simulation performance analysis
+- Plan identification supports both numeric ("1", "01") and full HDF path inputs with auto-padding
+- Follows ras-commander naming conventions and API patterns
+- Supports HEC-RAS versions 6.5, 6.6 (configurable via environment variables)
 
 ### Key Dependencies
 - **mcp**: Model Context Protocol server framework
 - **ras-commander**: HEC-RAS project interface library (requires HEC-RAS installation)
-- **pandas**: DataFrame handling for structured data
+- **pandas**: DataFrame handling and data manipulation
+- **h5py**: Direct HDF5 file access for structure exploration
 
-### Error Handling
-- Validates project paths before initialization
-- Provides detailed error messages for common issues (missing files, wrong version, etc.)
-- Graceful handling of missing data components (plans, geometries, etc.)
+### Error Handling & Robustness
+- Path validation before project initialization (server.py:272-276)
+- Graceful handling of missing data components (plans, geometries, boundaries)
+- Detailed error messages for common issues (version mismatches, missing files)
+- Output truncation to prevent token limit exceeded errors (server.py:50-65)
+- DataFrame column filtering for concise vs verbose output modes (server.py:66-135)
 
-## HEC-RAS Integration Notes
-- Requires HEC-RAS to be installed at expected location (typically C:\Program Files (x86)\HEC\HEC-RAS\)
-- Project paths must point to folder containing .prj files
-- Muncie test data includes all necessary components (HDF5 results, terrain, boundaries, etc.)
+## HEC-RAS Integration Requirements
+- HEC-RAS installation required at standard location: `C:\Program Files (x86)\HEC\HEC-RAS\`
+- Project paths must point to folders containing `.prj` files
+- Test projects (Muncie, BeaverLake) include complete model components: geometries, plans, results, terrain data, boundary conditions
+- Environment variables: `HECRAS_VERSION` (default: "6.6"), `HECRAS_PATH` (custom installation path)
