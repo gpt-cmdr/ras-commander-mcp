@@ -11,13 +11,11 @@
       <path d="M10,0 L10,50 M0,10 L50,10 M20,20 L30,20 L30,30 M40,10 L40,40 L30,40" fill="none" stroke="#5CDB95" stroke-width="0.5" stroke-opacity="0.3" />
     </pattern>
     
-    <!-- Neural network pattern -->
-    <pattern id="neural-pattern" patternUnits="userSpaceOnUse" width="40" height="40">
-      <circle cx="10" cy="10" r="1.5" fill="#5CDB95" opacity="0.4" />
-      <circle cx="30" cy="10" r="1.5" fill="#5CDB95" opacity="0.4" />
-      <circle cx="20" cy="30" r="1.5" fill="#5CDB95" opacity="0.4" />
-      <path d="M10,10 L30,10 M10,10 L20,30 M30,10 L20,30" stroke="#5CDB95" stroke-width="0.3" opacity="0.3" />
-    </pattern>
+    <!-- QGIS gradient -->
+    <linearGradient id="qgis-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#589632" />
+      <stop offset="100%" stop-color="#93b023" />
+    </linearGradient>
   </defs>
   
   <!-- Main background -->
@@ -25,9 +23,6 @@
   
   <!-- Circuit pattern overlay -->
   <rect width="450" height="300" fill="url(#circuit-pattern)" opacity="0.2" />
-  
-  <!-- Neural network pattern overlay -->
-  <rect width="450" height="300" fill="url(#neural-pattern)" opacity="0.3" />
   
   <!-- Main title at the top -->
   <text x="225" y="45" font-family="Arial, sans-serif" font-size="36" font-weight="bold" text-anchor="middle" fill="#EDF5E1">RAS COMMANDER</text>
@@ -38,35 +33,16 @@
   <!-- Horizontal rectangle overlay -->
   <rect x="55" y="185" width="340" height="50" fill="#05386B" stroke="#5CDB95" stroke-width="2" rx="2" ry="2" />
   
-  <!-- MCP Protocol interface at top of circle -->
-  <rect x="145" y="75" width="160" height="40" rx="5" ry="5" fill="#000" fill-opacity="0.85" />
-  <text x="155" y="88" font-family="Consolas, monospace" font-size="9" fill="#5CDB95">MCP Server Connected</text>
-  <text x="155" y="100" font-family="Consolas, monospace" font-size="10" fill="#5CDB95">🤖 hecras_project_summary</text>
-  <text x="155" y="111" font-family="Consolas, monospace" font-size="10" fill="#5CDB95">🔍 get_plan_results</text>
+  <!-- QGIS Processing Toolbox interface at top of circle -->
+  <rect x="150" y="75" width="150" height="35" rx="3" ry="3" fill="#000" fill-opacity="0.85" />
+  <text x="155" y="88" font-family="Consolas, monospace" font-size="10" fill="#5CDB95">Processing Toolbox</text>
+  <text x="160" y="101" font-family="Consolas, monospace" font-size="9" fill="#93b023">▼ RAS Commander</text>
   
-  <!-- AI/Claude connection nodes -->
-  <g opacity="0.8">
-    <!-- Connection nodes around the circle -->
-    <circle cx="160" cy="120" r="3" fill="#5CDB95">
-      <animate attributeName="opacity" values="1;0.3;1" dur="2s" repeatCount="indefinite" />
-    </circle>
-    <circle cx="290" cy="120" r="3" fill="#5CDB95">
-      <animate attributeName="opacity" values="1;0.3;1" dur="2s" repeatCount="indefinite" begin="0.5s" />
-    </circle>
-    <circle cx="160" cy="180" r="3" fill="#5CDB95">
-      <animate attributeName="opacity" values="1;0.3;1" dur="2s" repeatCount="indefinite" begin="1s" />
-    </circle>
-    <circle cx="290" cy="180" r="3" fill="#5CDB95">
-      <animate attributeName="opacity" values="1;0.3;1" dur="2s" repeatCount="indefinite" begin="1.5s" />
-    </circle>
-    
-    <!-- Connection lines -->
-    <path d="M160,120 L225,150 L290,120" fill="none" stroke="#5CDB95" stroke-width="1" opacity="0.6">
-      <animate attributeName="stroke-dasharray" values="0,200;100,200;200,200" dur="3s" repeatCount="indefinite" />
-    </path>
-    <path d="M160,180 L225,150 L290,180" fill="none" stroke="#5CDB95" stroke-width="1" opacity="0.6">
-      <animate attributeName="stroke-dasharray" values="0,200;100,200;200,200" dur="3s" repeatCount="indefinite" begin="1s" />
-    </path>
+  <!-- QGIS icon representation -->
+  <g transform="translate(290, 80)">
+    <!-- Simplified QGIS logo -->
+    <rect x="0" y="0" width="25" height="25" rx="3" ry="3" fill="url(#qgis-gradient)" />
+    <text x="12.5" y="18" font-family="Arial, sans-serif" font-size="16" font-weight="bold" text-anchor="middle" fill="#FFF">Q</text>
   </g>
   
   <!-- Dynamic water wave bands - centered in circle -->
@@ -95,12 +71,28 @@
   </g>
   
   <!-- Subtitle text inside the horizontal band -->
-  <text x="225" y="206" font-family="Arial, sans-serif" font-size="18" font-weight="bold" text-anchor="middle" fill="#EDF5E1">Model Context Protocol (MCP) Server</text>
-  <text x="225" y="226" font-family="Arial, sans-serif" font-size="16" font-weight="normal" text-anchor="middle" fill="#EDF5E1">HEC-RAS Project Info for LLM Agents</text>
+  <text x="225" y="206" font-family="Arial, sans-serif" font-size="20" font-weight="bold" text-anchor="middle" fill="#EDF5E1">QGIS PLUGINS</text>
+  <text x="225" y="226" font-family="Arial, sans-serif" font-size="16" font-weight="normal" text-anchor="middle" fill="#EDF5E1">For HEC-RAS 6.x Data Processing</text>
   
-
+  <!-- Feature icons at bottom -->
+  <g transform="translate(80, 255)" opacity="0.7">
+    <!-- Geometry icon -->
+    <rect x="0" y="0" width="15" height="15" fill="none" stroke="#8EE4AF" stroke-width="1.5" />
+    <circle cx="7.5" cy="7.5" r="2" fill="#8EE4AF" />
+    <text x="20" y="11" font-family="Arial, sans-serif" font-size="12" fill="#8EE4AF">Geometry</text>
+  </g>
   
-  <!-- Partnership text -->
-  <text x="225" y="275" font-family="Arial, sans-serif" font-size="12" text-anchor="middle" fill="#8EE4AF" opacity="0.7">LLM Forward Tooling by CLB Engineering Corporation</text>
-
+  <g transform="translate(200, 255)" opacity="0.7">
+    <!-- Results icon -->
+    <path d="M0,10 L5,5 L10,8 L15,2" fill="none" stroke="#8EE4AF" stroke-width="1.5" />
+    <text x="20" y="11" font-family="Arial, sans-serif" font-size="12" fill="#8EE4AF">Results</text>
+  </g>
+  
+  <g transform="translate(300, 255)" opacity="0.7">
+    <!-- Analysis icon -->
+    <circle cx="7.5" cy="7.5" r="7" fill="none" stroke="#8EE4AF" stroke-width="1.5" />
+    <line x1="7.5" y1="0" x2="7.5" y2="15" stroke="#8EE4AF" stroke-width="1.5" />
+    <line x1="0" y1="7.5" x2="15" y2="7.5" stroke="#8EE4AF" stroke-width="1.5" />
+    <text x="20" y="11" font-family="Arial, sans-serif" font-size="12" fill="#8EE4AF">Analysis</text>
+  </g>
 </svg>

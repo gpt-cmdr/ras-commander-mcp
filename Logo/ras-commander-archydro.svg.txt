@@ -1,0 +1,72 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 450 300">
+  <!-- Background with gradient -->
+  <defs>
+    <linearGradient id="bg-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#05386B" />
+      <stop offset="100%" stop-color="#0B93C7" />
+    </linearGradient>
+    
+    <!-- Digital circuit pattern -->
+    <pattern id="circuit-pattern" patternUnits="userSpaceOnUse" width="50" height="50" patternTransform="rotate(45)">
+      <path d="M10,0 L10,50 M0,10 L50,10 M20,20 L30,20 L30,30 M40,10 L40,40 L30,40" fill="none" stroke="#5CDB95" stroke-width="0.5" stroke-opacity="0.3" />
+    </pattern>
+  </defs>
+  
+  <!-- Main background -->
+  <rect width="450" height="300" fill="url(#bg-gradient)" />
+  
+  <!-- Circuit pattern overlay -->
+  <rect width="450" height="300" fill="url(#circuit-pattern)" opacity="0.2" />
+  
+  <!-- Main title at the top -->
+  <text x="225" y="45" font-family="Arial, sans-serif" font-size="36" font-weight="bold" text-anchor="middle" fill="#EDF5E1">RAS COMMANDER</text>
+  
+  <!-- Central circular emblem -->
+  <circle cx="225" cy="150" r="100" fill="#05386B" stroke="#5CDB95" stroke-width="2" />
+  
+  <!-- Horizontal rectangle overlay -->
+  <rect x="55" y="185" width="340" height="50" fill="#05386B" stroke="#5CDB95" stroke-width="2" rx="2" ry="2" />
+  
+  <!-- ArcGIS Toolboxes interface at top of circle -->
+  <rect x="155" y="82" width="140" height="26" rx="3" ry="3" fill="#000" fill-opacity="0.85" />
+  <text x="160" y="93" font-family="Consolas, monospace" font-size="9" fill="#5CDB95">Toolboxes:</text>
+  <text x="168" y="103" font-family="Consolas, monospace" font-size="9" fill="#5CDB95">▸ RAS Commander Tools</text>
+  
+  <!-- Dynamic water wave bands - centered in circle -->
+  <g opacity="0.7">
+    <path d="M129,120 C145,110 165,130 185,120 C205,110 225,130 245,120 C265,110 285,130 321,120" fill="none" stroke="#5CDB95" stroke-width="4">
+      <animate attributeName="d" 
+               values="M129,120 C145,110 165,130 185,120 C205,110 225,130 245,120 C265,110 285,130 321,120;
+                       M129,120 C145,130 165,110 185,120 C205,130 225,110 245,120 C265,130 285,110 321,120;
+                       M129,120 C145,110 165,130 185,120 C205,110 225,130 245,120 C265,110 285,130 321,120"
+               dur="4s" repeatCount="indefinite" />
+    </path>
+    <path d="M125,140 C145,130 165,150 185,140 C205,130 225,150 245,140 C265,130 285,150 325,140" fill="none" stroke="#5CDB95" stroke-width="4">
+      <animate attributeName="d" 
+               values="M125,140 C145,130 165,150 185,140 C205,130 225,150 245,140 C265,130 285,150 325,140;
+                       M125,140 C145,150 165,130 185,140 C205,150 225,130 245,140 C265,150 285,130 325,140;
+                       M125,140 C145,130 165,150 185,140 C205,130 225,150 245,140 C265,130 285,150 325,140"
+               dur="4s" repeatCount="indefinite" begin="0.5s" />
+    </path>
+    <path d="M125,160 C145,150 165,170 185,160 C205,150 225,170 245,160 C265,150 285,170 325,160" fill="none" stroke="#5CDB95" stroke-width="4">
+      <animate attributeName="d" 
+               values="M125,160 C145,150 165,170 185,160 C205,150 225,170 245,160 C265,150 285,170 325,160;
+                       M125,160 C145,170 165,150 185,160 C205,170 225,150 245,160 C265,170 285,150 325,160;
+                       M125,160 C145,150 165,170 185,160 C205,150 225,170 245,160 C265,150 285,170 325,160"
+               dur="4s" repeatCount="indefinite" begin="1s" />
+    </path>
+  </g>
+  
+  <!-- Subtitle text inside the horizontal band -->
+  <text x="225" y="206" font-family="Arial, sans-serif" font-size="18" font-weight="bold" text-anchor="middle" fill="#EDF5E1">ARC HYDRO TOOLS</text>
+  <text x="225" y="226" font-family="Arial, sans-serif" font-size="16" font-weight="normal" text-anchor="middle" fill="#EDF5E1">HEC-RAS 6.x Data for ArcGIS Pro</text>
+  
+  <!-- Corner accents -->
+  <path d="M20,20 L20,40 L40,20 Z" fill="#5CDB95" opacity="0.5" />
+  <path d="M430,20 L410,20 L430,40 Z" fill="#5CDB95" opacity="0.5" />
+  <path d="M20,280 L20,260 L40,280 Z" fill="#5CDB95" opacity="0.5" />
+  <path d="M430,280 L430,260 L410,280 Z" fill="#5CDB95" opacity="0.5" />
+  
+  <!-- Partnership text moved up to be within the frame -->
+  <text x="225" y="275" font-family="Arial, sans-serif" font-size="12" text-anchor="middle" fill="#8EE4AF" opacity="0.7">In Partnership with CLB Engineering Corporation</text>
+</svg>
