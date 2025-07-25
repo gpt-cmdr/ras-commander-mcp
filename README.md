@@ -29,7 +29,7 @@ For a demonstration of CLB's H&H automation services, contact us at info@clbengi
     1D and 2D Structures
     
 - Summary Results at Boundaries (Max WSE and Max Flow)
-- Also Structures (list them all with max wse snd max flow)
+- Also Structures (list them all with max wse and max flow)
 - Detailed XSEC results table (by river/reach) for debugging
 
 - HEC-RAS Documentation Search Capability (return relevant confluence document links via RAG or deep research)
