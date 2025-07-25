@@ -44,6 +44,9 @@ For a demonstration of CLB's H&H automation services, contact us at info@clbengi
 
 ## Installation
 
+This MCP server uses the "uv" library to handle python virtual environments.  Once this is installed, the Claude Desktop configuration will handle the package installation and running the MCP server locally whenever Claude Desktop (or Claude Code) are started.  
+
+
 ### Using uv (Recommended)
 
 1. Install uv if you haven't already:
@@ -63,20 +66,28 @@ cd ras-commander-mcp
 
 3. The dependencies will be automatically installed when you run the server with uvx (see Configuration below).
 
-### Using pip (Alternative)
-
-If you prefer to use pip:
-```bash
-pip install mcp ras-commander pandas
-```
-
 ## Configuration
 
-### Claude Desktop Integration (Recommended)
+### Claude Desktop Integration via uvx/pip package (Default, Recommended)
 
 Add the following to your Claude Desktop configuration file (`claude_desktop_config.json`):
 
-#### Option 1: From Git Repository (Automatic Updates)
+```json
+{
+  "mcpServers": {
+    "hecras": {
+      "command": "uvx",
+      "args": ["ras-commander-mcp"],
+      "env": {
+        "HECRAS_VERSION": "6.6"
+      }
+    }
+  }
+}
+```
+This will install the pip package and set up a virtual environment through uvx to run the MCP server. 
+
+#### Alternate Install 1: From Git Repository (For latest and greatest version)
 ```json
 {
   "mcpServers": {
@@ -94,7 +105,7 @@ Add the following to your Claude Desktop configuration file (`claude_desktop_con
 }
 ```
 
-#### Option 2: Local Development Installation
+#### Alternate Install 2: Local Development Installation
 If you've cloned the repository locally for development:
 
 ```json
@@ -111,26 +122,11 @@ If you've cloned the repository locally for development:
 }
 ```
 
-#### Option 3: Direct Python Execution
-Alternative approach using Python directly:
 
-```json
-{
-  "mcpServers": {
-    "hecras": {
-      "command": "uv",
-      "args": ["run", "python", "C:\\path\\to\\ras-commander-mcp-main\\server.py"],
-      "env": {
-        "HECRAS_VERSION": "6.6"
-      }
-    }
-  }
-}
-```
 
-### HEC-RAS Version Configuration
+### MCP Settings Configuration
 
-The MCP server uses HEC-RAS version 6.6 by default. To use a different version:
+In future versions, the MCP server will be able to execute HEC-RAS runs, so the MCP server has settings for the HEC-RAS path, and uses values for HEC-RAS version 6.6 by default.  These settings are not yet useful, but will become useful in future versions.  To use a different version:
 
 1. **Set HEC-RAS Version** (if you have a different version installed):
    ```json
