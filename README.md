@@ -1,4 +1,4 @@
-# HEC-RAS MCP Server
+# HEC-RAS Model Context Protocol (MCP) Server
 
 <div align="center">
   <img src="ras_commander_mcp_logo.svg" alt="RAS Commander MCP Logo" width="70%">
