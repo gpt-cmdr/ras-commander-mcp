@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Commands
 
 ### Build & Development
-- **Install dependencies**: `uv pip install mcp ras-commander pandas` or `uv sync`
+- **Install dependencies**: `uv pip install fastmcp ras-commander pandas` or `uv sync`
 - **Run MCP server**: `uv run python server.py`
 - **Alternative for testing**: `uvx --from . ras-commander-mcp`
 
@@ -50,9 +50,9 @@ ras-commander-mcp-main/
 ## Architecture
 
 ### MCP Server Implementation
-This repository implements a Model Context Protocol (MCP) server that bridges HEC-RAS hydraulic modeling software with Claude Desktop. The server is built on top of the [ras-commander](https://github.com/gpt-cmdr/ras-commander) Python library.
+This repository implements a Model Context Protocol (MCP) server that bridges HEC-RAS hydraulic modeling software with Claude Desktop. The server uses [FastMCP 3.0](https://github.com/jlowin/fastmcp) with decorator-based tool registration, built on top of the [ras-commander](https://github.com/gpt-cmdr/ras-commander) Python library.
 
-**Core MCP Tools** (server.py:136-280):
+**Core MCP Tools** (decorated with `@mcp.tool` in server.py):
 - `hecras_project_summary`: Comprehensive or selective project information with boolean flags controlling output sections
 - `read_plan_description`: Extract the multi-line description from a specific plan file
 - `get_plan_results_summary`: Detailed plan results including unsteady simulation info, volume accounting, and runtime performance data
@@ -61,32 +61,33 @@ This repository implements a Model Context Protocol (MCP) server that bridges HE
 - `get_projection_info`: Spatial projection information (WKT format) extraction from HDF files
 
 **Data Processing Pipeline**:
-1. HEC-RAS project files (.prj, .g*, .p*, .u*, etc.) 
+1. HEC-RAS project files (.prj, .g*, .p*, .u*, etc.)
 2. ras-commander library parsing → pandas DataFrames
-3. DataFrame filtering and formatting (server.py:66-135)
-4. Text conversion with truncation limits (server.py:50-65)
+3. DataFrame filtering and formatting via helper functions
+4. Text conversion with truncation limits
 5. Structured output to Claude via MCP protocol
 
 **ras-commander Integration**:
-- Uses `ras_commander.init_ras_project()` for project initialization
+- Uses `ras_commander.init_ras_project()` for project initialization (wrapped in `_init_project()` helper)
 - Leverages `HdfBase`, `HdfResultsPlan` classes for HDF data access
 - Implements local `get_compute_messages_local()` for simulation performance analysis
-- Plan identification supports both numeric ("1", "01") and full HDF path inputs with auto-padding
+- Plan identification supports both numeric ("1", "01") and full HDF path inputs with auto-padding (via `_resolve_plan_hdf_path()` helper)
 - Follows ras-commander naming conventions and API patterns
 - Supports HEC-RAS versions 6.5, 6.6 (configurable via environment variables)
 
 ### Key Dependencies
-- **mcp**: Model Context Protocol server framework
+- **fastmcp**: FastMCP 3.0 — decorator-based MCP server framework
 - **ras-commander**: HEC-RAS project interface library (requires HEC-RAS installation)
 - **pandas**: DataFrame handling and data manipulation
 - **h5py**: Direct HDF5 file access for structure exploration
 
 ### Error Handling & Robustness
-- Path validation before project initialization (server.py:272-276)
+- Path validation via `_init_project()` helper before project initialization
+- `ToolError` exceptions for proper MCP error semantics
 - Graceful handling of missing data components (plans, geometries, boundaries)
 - Detailed error messages for common issues (version mismatches, missing files)
-- Output truncation to prevent token limit exceeded errors (server.py:50-65)
-- DataFrame column filtering for concise vs verbose output modes (server.py:66-135)
+- Output truncation to prevent token limit exceeded errors
+- DataFrame column filtering for concise vs verbose output modes
 
 ## HEC-RAS Integration Requirements
 - HEC-RAS installation required at standard location: `C:\Program Files (x86)\HEC\HEC-RAS\`
