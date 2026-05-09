@@ -20,7 +20,7 @@ Repository = "https://github.com/gpt-cmdr/ras-commander-mcp.git"
 "Company" = "https://clbengineering.com/"
 
 [project.scripts]
-ras-commander-mcp = "server:run"
+ras-commander-mcp = "ras_commander_mcp.server:run"
 
 [build-system]
 requires = ["hatchling"]
@@ -33,4 +33,4 @@ dev-dependencies = [
 ]
 
 [tool.hatch.build.targets.wheel]
-packages = ["."]
+packages = ["ras_commander_mcp"]
