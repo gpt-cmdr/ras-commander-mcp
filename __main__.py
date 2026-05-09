@@ -1,6 +1,6 @@
 """Allow the package to be run as a module."""
-import asyncio
-from server import main
+
+from ras_commander_mcp.server import run
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    run()
