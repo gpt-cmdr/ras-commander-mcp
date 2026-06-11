@@ -222,6 +222,19 @@ All tools provided by this MCP server leverage the [ras-commander](https://githu
    - Parameters:
      - `hdf_path` (required): Full path to the HDF file
 
+7. **search_docs**: Search the ras-commander documentation and return the top matching pages with excerpts (read-only docs retrieval; requires network)
+   - Parameters:
+     - `query` (required): Search terms (e.g., "cross section results")
+
+8. **get_doc_page**: Retrieve the markdown/text content of a documentation page by path (read-only docs retrieval; requires network)
+   - Parameters:
+     - `path` (required): Page path, e.g. `reference/dataframe-reference` (leading/trailing slashes optional)
+
+> **Docs tools (`search_docs`, `get_doc_page`)** are read-only documentation retrieval and stay
+> within the MCP's stated scope (introspection / QAQC / review — never HEC-RAS execution). They
+> live-fetch from the docs site and therefore **require network access**. The base URL defaults to
+> `https://rascommander.info` and is overridable via the `RASCOMMANDER_DOCS_URL` environment variable.
+
 ### Example Usage in Claude
 
 Once configured, you can ask Claude:
@@ -232,6 +245,8 @@ Once configured, you can ask Claude:
 - "Show me the compute messages for plan '1'"
 - "Explore the HDF structure of my results file"
 - "Get the projection info from my terrain HDF"
+- "Search the ras-commander docs for cross section results"
+- "Show me the dataframe-reference documentation page"
 
 ## Python Library Reference
 

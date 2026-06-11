@@ -59,6 +59,13 @@ This repository implements a Model Context Protocol (MCP) server that bridges HE
 - `get_compute_messages`: Computation messages and performance metrics from HEC-RAS simulations with smart truncation
 - `get_hdf_structure`: HDF file structure exploration with group/dataset details and attributes
 - `get_projection_info`: Spatial projection information (WKT format) extraction from HDF files
+- `search_docs`: Read-only search of the ras-commander documentation site; returns top matching pages with excerpts (live fetch, requires network)
+- `get_doc_page`: Read-only retrieval of a documentation page's markdown/text by path (live fetch, requires network)
+
+**Docs retrieval tools** (`search_docs`, `get_doc_page`) live-fetch from the docs site (default
+`https://rascommander.info`, override via `RASCOMMANDER_DOCS_URL`). They are read-only documentation
+retrieval within the MCP's stated scope (introspection / QAQC / review — not HEC-RAS execution) and
+require network access. The search index and `llms-full.txt` are cached in-process with a 15-minute TTL.
 
 **Data Processing Pipeline**:
 1. HEC-RAS project files (.prj, .g*, .p*, .u*, etc.)
@@ -80,6 +87,7 @@ This repository implements a Model Context Protocol (MCP) server that bridges HE
 - **ras-commander**: HEC-RAS project interface library (requires HEC-RAS installation)
 - **pandas**: DataFrame handling and data manipulation
 - **h5py**: Direct HDF5 file access for structure exploration
+- **httpx**: HTTP client for live docs retrieval (`search_docs`, `get_doc_page`)
 
 ### Error Handling & Robustness
 - Path validation via `_init_project()` helper before project initialization

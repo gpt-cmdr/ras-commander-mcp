@@ -8,12 +8,15 @@ using the ras-commander library.
 
 import logging
 import os
+import re
 import sys
+import time
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional
 import pandas as pd
 import io
 
+import httpx
 from fastmcp import FastMCP
 from fastmcp.exceptions import ToolError
 
@@ -40,6 +43,16 @@ mcp = FastMCP(
 DEFAULT_RAS_VERSION = "6.6"
 HECRAS_VERSION = os.environ.get("HECRAS_VERSION", DEFAULT_RAS_VERSION)
 HECRAS_PATH = os.environ.get("HECRAS_PATH", None)
+
+# Docs retrieval configuration (read-only, network-backed)
+DEFAULT_DOCS_URL = "https://rascommander.info"
+DOCS_BASE_URL = os.environ.get("RASCOMMANDER_DOCS_URL", DEFAULT_DOCS_URL).rstrip("/")
+DOCS_HTTP_TIMEOUT = 10.0  # seconds
+DOCS_CACHE_TTL = 15 * 60  # seconds (15 minutes)
+
+# Module-level caches: {url_key: (fetch_time, payload)}
+_SEARCH_INDEX_CACHE: dict[str, tuple[float, Any]] = {}
+_LLMS_FULL_CACHE: dict[str, tuple[float, str]] = {}
 
 
 # ---------------------------------------------------------------------------
@@ -273,6 +286,159 @@ def dataframe_to_text(df: pd.DataFrame, name: str, df_type: str = None, showmore
 
 
 # ---------------------------------------------------------------------------
+# Docs retrieval helpers (live fetch from rascommander.info)
+# ---------------------------------------------------------------------------
+
+def _strip_html(text: str) -> str:
+    """Strip HTML tags / collapse whitespace from a search-index text blob."""
+    no_tags = re.sub(r"<[^>]+>", " ", text)
+    return re.sub(r"\s+", " ", no_tags).strip()
+
+
+def _normalize_doc_path(path: str) -> str:
+    """Normalize a docs path: strip leading/trailing slashes and a trailing index.md/.md."""
+    p = path.strip().strip("/")
+    if p.endswith("/index.md"):
+        p = p[: -len("/index.md")]
+    elif p.endswith(".md"):
+        p = p[: -len(".md")]
+    return p.strip("/")
+
+
+def _get_search_index() -> list[dict]:
+    """Fetch and cache the mkdocs Material search index. Raises ToolError on failure."""
+    url = f"{DOCS_BASE_URL}/search/search_index.json"
+    cached = _SEARCH_INDEX_CACHE.get(url)
+    now = time.time()
+    if cached and (now - cached[0]) < DOCS_CACHE_TTL:
+        return cached[1]
+    try:
+        resp = httpx.get(url, timeout=DOCS_HTTP_TIMEOUT, follow_redirects=True)
+        resp.raise_for_status()
+        data = resp.json()
+    except Exception as e:
+        raise ToolError(
+            f"Failed to fetch docs search index from {url}: {e}. "
+            f"This tool requires network access to {DOCS_BASE_URL}."
+        )
+    docs = data.get("docs", []) if isinstance(data, dict) else []
+    _SEARCH_INDEX_CACHE[url] = (now, docs)
+    return docs
+
+
+def _get_llms_full() -> Optional[str]:
+    """Fetch and cache llms-full.txt. Returns None (not an error) if unavailable."""
+    url = f"{DOCS_BASE_URL}/llms-full.txt"
+    cached = _LLMS_FULL_CACHE.get(url)
+    now = time.time()
+    if cached and (now - cached[0]) < DOCS_CACHE_TTL:
+        return cached[1]
+    try:
+        resp = httpx.get(url, timeout=DOCS_HTTP_TIMEOUT, follow_redirects=True)
+        if resp.status_code == 404:
+            return None
+        resp.raise_for_status()
+        text = resp.text
+    except Exception:
+        return None
+    _LLMS_FULL_CACHE[url] = (now, text)
+    return text
+
+
+def _score_doc(query_terms: list[str], title: str, text: str) -> float:
+    """Deterministic relevance score for a doc entry against query terms."""
+    title_l = title.lower()
+    text_l = text.lower()
+    score = 0.0
+    for term in query_terms:
+        # Title matches weigh heavily; text matches weigh by frequency (capped).
+        if term in title_l:
+            score += 10.0
+        text_hits = text_l.count(term)
+        if text_hits:
+            score += min(text_hits, 5)
+    # Small bonus for matching all terms in the title (phrase relevance).
+    if query_terms and all(t in title_l for t in query_terms):
+        score += 5.0
+    return score
+
+
+def _extract_llms_full_section(llms_full: str, norm_path: str) -> Optional[str]:
+    """
+    Extract the section of llms-full.txt corresponding to ``norm_path``.
+
+    llms-full.txt concatenates curated pages. mkdocs-llmstxt emits each page's
+    source URL on a heading/comment line; we locate the line that references the
+    page path, then return text up to the next page-boundary marker. If we cannot
+    isolate the exact page, return the closest-matching section (or None).
+    """
+    if not llms_full or not norm_path:
+        return None
+
+    lines = llms_full.splitlines()
+    # Candidate boundary lines: those that look like a page URL or path reference.
+    # Match either the full URL or the path itself appearing on a heading/source line.
+    path_variants = {norm_path, f"{norm_path}/", f"/{norm_path}/", f"{norm_path}/index.md"}
+
+    boundary_indices = []  # (line_index, is_target)
+    for i, line in enumerate(lines):
+        stripped = line.strip()
+        # A boundary is a line that references a page path/URL. Heuristics:
+        # - contains the docs base URL followed by a path
+        # - or is a top-level markdown heading that contains a path-like token
+        is_boundary = False
+        if DOCS_BASE_URL in line:
+            is_boundary = True
+        elif re.match(r"^#{1,2}\s", line) and ("/" in stripped or stripped.startswith("# ")):
+            is_boundary = True
+        if is_boundary:
+            line_l = line.lower()
+            is_target = any(pv.lower() in line_l for pv in path_variants)
+            # Also treat the last path segment as a weak target signal in headings.
+            if not is_target:
+                last_seg = norm_path.rsplit("/", 1)[-1].replace("-", " ").lower()
+                if last_seg and re.match(r"^#{1,2}\s", line) and last_seg in line_l:
+                    is_target = True
+            boundary_indices.append((i, is_target))
+
+    if not boundary_indices:
+        return None
+
+    # Find the target boundary, then slice to the next boundary.
+    for idx, (line_i, is_target) in enumerate(boundary_indices):
+        if is_target:
+            start = line_i
+            end = boundary_indices[idx + 1][0] if idx + 1 < len(boundary_indices) else len(lines)
+            section = "\n".join(lines[start:end]).strip()
+            if section:
+                return section
+    return None
+
+
+def _fetch_rendered_page(norm_path: str) -> str:
+    """Final fallback: fetch the rendered HTML page and return its text. Raises ToolError."""
+    url = f"{DOCS_BASE_URL}/{norm_path}/" if norm_path else f"{DOCS_BASE_URL}/"
+    try:
+        resp = httpx.get(url, timeout=DOCS_HTTP_TIMEOUT, follow_redirects=True)
+        resp.raise_for_status()
+    except Exception as e:
+        raise ToolError(
+            f"Failed to fetch docs page '{norm_path}' from {url}: {e}. "
+            f"This tool requires network access to {DOCS_BASE_URL}."
+        )
+    # Strip <head>, scripts, styles, then tags, to yield readable text.
+    html = resp.text
+    html = re.sub(r"(?is)<head\b.*?</head>", " ", html)
+    html = re.sub(r"(?is)<script\b.*?</script>", " ", html)
+    html = re.sub(r"(?is)<style\b.*?</style>", " ", html)
+    html = re.sub(r"(?is)<nav\b.*?</nav>", " ", html)
+    text = re.sub(r"(?s)<[^>]+>", " ", html)
+    text = re.sub(r"[ \t]+", " ", text)
+    text = re.sub(r"\n\s*\n\s*\n+", "\n\n", text)
+    return text.strip()
+
+
+# ---------------------------------------------------------------------------
 # MCP Tools
 # ---------------------------------------------------------------------------
 
@@ -493,6 +659,83 @@ def get_projection_info(hdf_path: str) -> str:
         response_parts.append("\nNo projection information found")
 
     return truncate_output("\n".join(response_parts))
+
+
+@mcp.tool(annotations={"readOnlyHint": True})
+def search_docs(query: str) -> str:
+    """Search the ras-commander documentation (rascommander.info) and return the top matching pages with excerpts (read-only, requires network)."""
+    if not query or not query.strip():
+        raise ToolError("Query must be a non-empty string.")
+
+    docs = _get_search_index()
+    query_terms = [t for t in re.split(r"\s+", query.lower().strip()) if t]
+
+    scored = []
+    for entry in docs:
+        location = entry.get("location", "")
+        title = entry.get("title", "") or location or "(untitled)"
+        raw_text = entry.get("text", "") or ""
+        clean_text = _strip_html(raw_text)
+        score = _score_doc(query_terms, title, clean_text)
+        if score > 0:
+            scored.append((score, title, location, clean_text))
+
+    if not scored:
+        return f"No documentation matches found for query: {query!r} (searched {len(docs)} pages on {DOCS_BASE_URL})."
+
+    # Deterministic ordering: score desc, then title asc, then location asc.
+    scored.sort(key=lambda x: (-x[0], x[1], x[2]))
+    top = scored[:5]
+
+    response_parts = [
+        f"Documentation search results for: {query!r}",
+        f"Source: {DOCS_BASE_URL}",
+        "=" * 80,
+        "",
+    ]
+    for score, title, location, clean_text in top:
+        url = f"{DOCS_BASE_URL}/{location}" if location else f"{DOCS_BASE_URL}/"
+        excerpt = clean_text[:300].strip()
+        if len(clean_text) > 300:
+            excerpt += "..."
+        response_parts.append(f"{title} - {url}")
+        if excerpt:
+            response_parts.append(f"  {excerpt}")
+        response_parts.append("")
+
+    return truncate_output("\n".join(response_parts))
+
+
+@mcp.tool(annotations={"readOnlyHint": True})
+def get_doc_page(path: str) -> str:
+    """Retrieve the markdown/text content of a ras-commander documentation page by path, e.g. 'reference/dataframe-reference' (read-only, requires network)."""
+    if not path or not path.strip():
+        raise ToolError("Path must be a non-empty string.")
+
+    norm_path = _normalize_doc_path(path)
+
+    # PRIMARY: extract the page section from llms-full.txt (if published).
+    llms_full = _get_llms_full()
+    if llms_full:
+        section = _extract_llms_full_section(llms_full, norm_path)
+        if section:
+            header = f"# Source: {DOCS_BASE_URL}/{norm_path}/ (via llms-full.txt)\n\n"
+            return truncate_output(header + section)
+
+    # FALLBACK: per-page markdown mirror (may 404 for pages without a mirror).
+    mirror_url = f"{DOCS_BASE_URL}/{norm_path}/index.md" if norm_path else f"{DOCS_BASE_URL}/index.md"
+    try:
+        resp = httpx.get(mirror_url, timeout=DOCS_HTTP_TIMEOUT, follow_redirects=True)
+        if resp.status_code == 200 and resp.text.strip():
+            header = f"# Source: {mirror_url}\n\n"
+            return truncate_output(header + resp.text)
+    except Exception:
+        pass
+
+    # FINAL FALLBACK: rendered page text.
+    rendered = _fetch_rendered_page(norm_path)
+    header = f"# Source: {DOCS_BASE_URL}/{norm_path}/ (rendered page text)\n\n"
+    return truncate_output(header + rendered)
 
 
 # ---------------------------------------------------------------------------
