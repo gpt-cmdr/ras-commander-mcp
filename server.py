@@ -13,6 +13,7 @@ import sys
 import time
 from pathlib import Path
 from typing import Any, Optional
+from urllib.parse import urlsplit, quote
 import pandas as pd
 import io
 
@@ -296,13 +297,66 @@ def _strip_html(text: str) -> str:
 
 
 def _normalize_doc_path(path: str) -> str:
-    """Normalize a docs path: strip leading/trailing slashes and a trailing index.md/.md."""
-    p = path.strip().strip("/")
+    """Normalize and SANITIZE a docs page path to a safe relative slug.
+
+    Rejects anything that could redirect the fetch off the docs base or inject a
+    query/fragment: absolute URLs (scheme/netloc), protocol-relative ``//host``,
+    ``..`` traversal, backslashes, query (``?``), fragment (``#``), userinfo
+    (``@``), and control characters. Each path segment is percent-encoded.
+
+    Raises ToolError on invalid input. Returns a clean ``a/b/c`` slug (no
+    leading/trailing slash; trailing ``index.md``/``.md`` stripped).
+    """
+    if not isinstance(path, str):
+        raise ToolError("Documentation path must be a string.")
+    raw = path.strip()
+    # Reject obvious injection vectors up front.
+    if (
+        "\\" in raw
+        or "?" in raw
+        or "#" in raw
+        or "@" in raw
+        or "://" in raw
+        or raw.startswith("//")
+        or any(ord(c) < 0x20 for c in raw)
+    ):
+        raise ToolError(
+            f"Invalid documentation path {path!r}: must be a relative docs slug "
+            "(e.g. 'reference/dataframe-reference'), not a URL or query."
+        )
+    # urlsplit catches any remaining scheme/netloc.
+    parts = urlsplit(raw)
+    if parts.scheme or parts.netloc or parts.query or parts.fragment:
+        raise ToolError(
+            f"Invalid documentation path {path!r}: only a relative docs slug is allowed."
+        )
+    p = parts.path.strip().strip("/")
     if p.endswith("/index.md"):
         p = p[: -len("/index.md")]
     elif p.endswith(".md"):
         p = p[: -len(".md")]
-    return p.strip("/")
+    p = p.strip("/")
+    if not p:
+        return ""
+    safe_segments = []
+    for seg in p.split("/"):
+        if seg in ("", ".", ".."):
+            raise ToolError(
+                f"Invalid documentation path {path!r}: path traversal segments are not allowed."
+            )
+        safe_segments.append(quote(seg, safe=""))
+    return "/".join(safe_segments)
+
+
+def _assert_same_origin(resp: "httpx.Response") -> None:
+    """Raise ToolError if a (possibly redirected) response left the docs base origin."""
+    final = urlsplit(str(resp.url))
+    base = urlsplit(DOCS_BASE_URL)
+    if (final.scheme, final.netloc) != (base.scheme, base.netloc):
+        raise ToolError(
+            f"Refusing docs response from off-origin URL {resp.url} "
+            f"(expected origin {base.scheme}://{base.netloc})."
+        )
 
 
 def _get_search_index() -> list[dict]:
@@ -369,8 +423,9 @@ def _extract_llms_full_section(llms_full: str, norm_path: str) -> Optional[str]:
 
     llms-full.txt concatenates curated pages. mkdocs-llmstxt emits each page's
     source URL on a heading/comment line; we locate the line that references the
-    page path, then return text up to the next page-boundary marker. If we cannot
-    isolate the exact page, return the closest-matching section (or None).
+    page path EXACTLY, then return text up to the next page-boundary marker.
+    Returns None if no exact page boundary is found (caller then falls back to the
+    markdown mirror / rendered page) -- we never return a different page's content.
     """
     if not llms_full or not norm_path:
         return None
@@ -393,12 +448,11 @@ def _extract_llms_full_section(llms_full: str, norm_path: str) -> Optional[str]:
             is_boundary = True
         if is_boundary:
             line_l = line.lower()
+            # Require an EXACT path/URL match on the boundary line. A weak
+            # last-segment heading heuristic was removed: it could return a
+            # different page's content mislabeled as the requested page. If no
+            # exact boundary is found we return None and the caller falls back.
             is_target = any(pv.lower() in line_l for pv in path_variants)
-            # Also treat the last path segment as a weak target signal in headings.
-            if not is_target:
-                last_seg = norm_path.rsplit("/", 1)[-1].replace("-", " ").lower()
-                if last_seg and re.match(r"^#{1,2}\s", line) and last_seg in line_l:
-                    is_target = True
             boundary_indices.append((i, is_target))
 
     if not boundary_indices:
@@ -420,7 +474,10 @@ def _fetch_rendered_page(norm_path: str) -> str:
     url = f"{DOCS_BASE_URL}/{norm_path}/" if norm_path else f"{DOCS_BASE_URL}/"
     try:
         resp = httpx.get(url, timeout=DOCS_HTTP_TIMEOUT, follow_redirects=True)
+        _assert_same_origin(resp)
         resp.raise_for_status()
+    except ToolError:
+        raise
     except Exception as e:
         raise ToolError(
             f"Failed to fetch docs page '{norm_path}' from {url}: {e}. "
@@ -726,9 +783,12 @@ def get_doc_page(path: str) -> str:
     mirror_url = f"{DOCS_BASE_URL}/{norm_path}/index.md" if norm_path else f"{DOCS_BASE_URL}/index.md"
     try:
         resp = httpx.get(mirror_url, timeout=DOCS_HTTP_TIMEOUT, follow_redirects=True)
+        _assert_same_origin(resp)
         if resp.status_code == 200 and resp.text.strip():
             header = f"# Source: {mirror_url}\n\n"
             return truncate_output(header + resp.text)
+    except ToolError:
+        raise
     except Exception:
         pass
 

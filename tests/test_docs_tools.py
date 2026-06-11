@@ -23,7 +23,9 @@ from server import (  # noqa: E402
     DOCS_BASE_URL,
     _normalize_doc_path,
     _score_doc,
+    _extract_llms_full_section,
 )
+from fastmcp.exceptions import ToolError  # noqa: E402
 
 
 def _docs_site_reachable() -> bool:
@@ -75,10 +77,61 @@ def test_search_docs_rejects_empty_query():
 
 
 def test_get_doc_page_rejects_empty_path():
-    from fastmcp.exceptions import ToolError
-
     with pytest.raises(ToolError):
         get_doc_page("")
+
+
+@pytest.mark.parametrize(
+    "bad",
+    [
+        "http://evil.com/x",
+        "https://evil.com",
+        "//evil.com/x",
+        "../../etc/passwd",
+        "reference/../../secret",
+        "reference\\dataframe",
+        "reference/dataframe?x=1",
+        "reference/dataframe#frag",
+        "user@evil.com/x",
+        "reference/da\x00ta",
+    ],
+)
+def test_normalize_doc_path_rejects_malicious(bad):
+    # Path sanitizer must reject URLs, traversal, query/fragment, userinfo, control chars.
+    with pytest.raises(ToolError):
+        _normalize_doc_path(bad)
+
+
+def test_normalize_doc_path_percent_encodes_segments():
+    # A stray space in a segment is encoded, not passed through raw.
+    assert _normalize_doc_path("user-guide/plan execution") == "user-guide/plan%20execution"
+
+
+def test_extract_llms_full_exact_match():
+    sample = (
+        "# Page One\n"
+        f"Source: {DOCS_BASE_URL}/reference/dataframe-reference/\n"
+        "plan_df columns here.\n"
+        "# Page Two\n"
+        f"Source: {DOCS_BASE_URL}/user-guide/overview/\n"
+        "overview body.\n"
+    )
+    section = _extract_llms_full_section(sample, "reference/dataframe-reference")
+    assert section is not None and "plan_df columns here" in section
+    # Must not bleed into the next page.
+    assert "overview body" not in section
+
+
+def test_extract_llms_full_returns_none_on_missing_or_ambiguous():
+    # A missing page must return None (caller falls back) -- never a weak-heading guess.
+    sample = (
+        "# Overview\n"
+        f"Source: {DOCS_BASE_URL}/user-guide/overview/\n"
+        "overview body.\n"
+    )
+    # 'missing/overview' shares the last segment 'overview' but is NOT this page.
+    assert _extract_llms_full_section(sample, "missing/overview") is None
+    assert _extract_llms_full_section(sample, "nope/not-here") is None
 
 
 # ---------------------------------------------------------------------------
