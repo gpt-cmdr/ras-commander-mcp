@@ -12,6 +12,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 # Import the tool functions directly
 from server import (
     hecras_project_summary,
+    list_geometry_elements,
     read_plan_description,
     get_compute_messages,
     get_plan_results_summary,
@@ -112,6 +113,18 @@ def test_new_tools():
             print(result[:1000] + "..." if len(result) > 1000 else result)
         except Exception as e:
             print(f"Error: {e}")
+
+    # Test geometry element listing
+    print("\n7.5. Testing list_geometry_elements...")
+    try:
+        result = list_geometry_elements(
+            project_path=str(muncie_path),
+            element_type="all",
+        )
+        print("Result:")
+        print(result[:1200] + "..." if len(result) > 1200 else result)
+    except Exception as e:
+        print(f"Error: {e}")
 
     # Find a geometry HDF file for projection test
     geom_hdf_files = list(muncie_path.glob("*.g*.hdf"))

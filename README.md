@@ -13,6 +13,7 @@ For a demonstration of CLB's H&H automation services, contact us at info@clbengi
 ## Features
 
 - Query comprehensive HEC-RAS project information (plans, geometries, flows, boundaries)
+- List HEC-RAS geometry elements including 1D rivers/reaches, cross sections, 2D reference lines, boundary lines, breaklines, structures, and mesh areas
 - Extract detailed plan results including unsteady simulation info and runtime metrics
 - Explore HDF file structures and extract computation messages
 - Support for multiple HEC-RAS versions (6.5, 6.6, etc.)
@@ -21,13 +22,6 @@ For a demonstration of CLB's H&H automation services, contact us at info@clbengi
 
 ## Future Features
 
-- List Geometry Elements
-    1D List Rivers/Reaches
-    1D Cross Sections by River and Reach
-    2D Reference Lines
-    Boundary Lines
-    1D and 2D Structures
-    
 - Summary Results at Boundaries (Max WSE and Max Flow)
 - Also Structures (list them all with max wse and max flow)
 - Detailed XSEC results table (by river/reach) for debugging
@@ -222,11 +216,27 @@ All tools provided by this MCP server leverage the [ras-commander](https://githu
    - Parameters:
      - `hdf_path` (required): Full path to the HDF file
 
-7. **search_docs**: Search the ras-commander documentation and return the top matching pages with excerpts (read-only docs retrieval; requires network)
+7. **list_geometry_elements**: List major geometry elements from geometry HDF files
+   - Geometry types:
+     - `rivers_reaches`: 1D river and reach alignment lines
+     - `cross_sections`: 1D cross-section cut lines by river, reach, and station
+     - `reference_lines`: 2D profile-output reference lines, optionally filtered by mesh area
+     - `bc_lines`: 2D flow area boundary condition lines
+     - `breaklines`: 2D mesh enforcement lines
+     - `structures`: bridges, culverts, inline structures, and lateral structures
+     - `mesh_areas`: named 2D flow areas
+   - Parameters:
+     - `project_path` (required): Full path to HEC-RAS project folder
+     - `geometry_number` (optional): Geometry number such as `1`, `01`, or `g01`; full geometry HDF paths are also accepted. Defaults to all geometry HDF files found in the project.
+     - `element_type` (optional): One of the geometry types above, common aliases such as `xs` or `boundary_lines`, or `all` (default)
+     - `mesh_name` (optional): Filter 2D reference lines to a specific mesh area
+     - `showmore` (optional): Show more attributes while still omitting raw geometry/detail columns (default: false)
+
+8. **search_docs**: Search the ras-commander documentation and return the top matching pages with excerpts (read-only docs retrieval; requires network)
    - Parameters:
      - `query` (required): Search terms (e.g., "cross section results")
 
-8. **get_doc_page**: Retrieve the markdown/text content of a documentation page by path (read-only docs retrieval; requires network)
+9. **get_doc_page**: Retrieve the markdown/text content of a documentation page by path (read-only docs retrieval; requires network)
    - Parameters:
      - `path` (required): Page path, e.g. `reference/dataframe-reference` (leading/trailing slashes optional)
 
@@ -245,6 +255,9 @@ Once configured, you can ask Claude:
 - "Show me the compute messages for plan '1'"
 - "Explore the HDF structure of my results file"
 - "Get the projection info from my terrain HDF"
+- "List all geometry elements for the model"
+- "List cross sections for geometry g01"
+- "Show 2D boundary lines and mesh areas"
 - "Search the ras-commander docs for cross section results"
 - "Show me the dataframe-reference documentation page"
 
