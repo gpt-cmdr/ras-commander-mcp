@@ -14,6 +14,7 @@ For a demonstration of CLB's H&H automation services, contact us at info@clbengi
 
 - Query comprehensive HEC-RAS project information (plans, geometries, flows, boundaries)
 - Extract detailed plan results including unsteady simulation info and runtime metrics
+- Query computed plan results directly, including profile lists, plan summary metrics, 2D mesh cells, and 1D cross sections
 - Explore HDF file structures and extract computation messages
 - Support for multiple HEC-RAS versions (6.5, 6.6, etc.)
 - Formatted text output suitable for LLM interaction
@@ -207,26 +208,54 @@ All tools provided by this MCP server leverage the [ras-commander](https://githu
      - `project_path` (required): Full path to HEC-RAS project folder
      - `plan_number` (required): Plan number or full path to plan HDF file
 
-4. **get_compute_messages**: Get computation messages and performance metrics
+4. **list_profiles**: List available steady profiles or unsteady output time steps for a computed plan
    - Parameters:
      - `project_path` (required): Full path to HEC-RAS project folder
      - `plan_number` (required): Plan number or full path to plan HDF file
 
-5. **get_hdf_structure**: Explore HDF file structure
+5. **get_plan_summary**: Get plan-level result statistics, including max WSEL, peak flow, volume accounting, and runtime timing
+   - Parameters:
+     - `project_path` (required): Full path to HEC-RAS project folder
+     - `plan_number` (required): Plan number or full path to plan HDF file
+     - `max_rows` (optional): Maximum rows to show in each table (default: 100)
+
+6. **get_mesh_results**: Get 2D mesh cell results for a plan profile/time step or maximum-over-time profile
+   - Parameters:
+     - `project_path` (required): Full path to HEC-RAS project folder
+     - `plan_number` (required): Plan number or full path to plan HDF file
+     - `profile` (optional): Output index, datetime from `list_profiles`, or `max` (default: "max")
+     - `mesh_name` (optional): 2D flow area name, or blank for all meshes
+     - `variables` (optional): Comma-separated variables such as `Water Surface,Depth,Velocity`
+     - `max_rows` (optional): Maximum rows to show per mesh (default: 100)
+
+7. **get_xsec_results**: Get 1D cross-section WSEL, flow, and velocity results for a plan profile/time step
+   - Parameters:
+     - `project_path` (required): Full path to HEC-RAS project folder
+     - `plan_number` (required): Plan number or full path to plan HDF file
+     - `profile` (optional): Output index, datetime/profile name from `list_profiles`, or `max` (default: "max")
+     - `variables` (optional): Comma-separated variables such as `Water_Surface,Flow,Velocity_Total`
+     - `max_rows` (optional): Maximum rows to show (default: 100)
+
+8. **get_compute_messages**: Get computation messages and performance metrics
+   - Parameters:
+     - `project_path` (required): Full path to HEC-RAS project folder
+     - `plan_number` (required): Plan number or full path to plan HDF file
+
+9. **get_hdf_structure**: Explore HDF file structure
    - Parameters:
      - `hdf_path` (required): Full path to the HDF file
      - `group_path` (optional): Internal HDF path to start exploration from (default: "/")
      - `paths_only` (optional): Show only paths without details (default: false)
 
-6. **get_projection_info**: Get spatial projection information (WKT)
+10. **get_projection_info**: Get spatial projection information (WKT)
    - Parameters:
      - `hdf_path` (required): Full path to the HDF file
 
-7. **search_docs**: Search the ras-commander documentation and return the top matching pages with excerpts (read-only docs retrieval; requires network)
+11. **search_docs**: Search the ras-commander documentation and return the top matching pages with excerpts (read-only docs retrieval; requires network)
    - Parameters:
      - `query` (required): Search terms (e.g., "cross section results")
 
-8. **get_doc_page**: Retrieve the markdown/text content of a documentation page by path (read-only docs retrieval; requires network)
+12. **get_doc_page**: Retrieve the markdown/text content of a documentation page by path (read-only docs retrieval; requires network)
    - Parameters:
      - `path` (required): Page path, e.g. `reference/dataframe-reference` (leading/trailing slashes optional)
 
@@ -242,6 +271,9 @@ Once configured, you can ask Claude:
 - "Query the HEC-RAS project at C:/Projects/MyRiverModel"
 - "Show me the plans in the Muncie test project"
 - "Get the results summary for plan '01' in my project"
+- "List the output profiles for plan '01'"
+- "Show max 2D mesh WSEL, depth, and velocity for plan '01'"
+- "Get cross-section WSEL and peak flow results for plan '01'"
 - "Show me the compute messages for plan '1'"
 - "Explore the HDF structure of my results file"
 - "Get the projection info from my terrain HDF"
