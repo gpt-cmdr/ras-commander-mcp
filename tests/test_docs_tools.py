@@ -21,6 +21,8 @@ from server import (  # noqa: E402
     search_docs,
     get_doc_page,
     DOCS_BASE_URL,
+    MCP_SCOPE_TIP,
+    _format_tool_response,
     _normalize_doc_path,
     _score_doc,
     _extract_llms_full_section,
@@ -132,6 +134,22 @@ def test_extract_llms_full_returns_none_on_missing_or_ambiguous():
     # 'missing/overview' shares the last segment 'overview' but is NOT this page.
     assert _extract_llms_full_section(sample, "missing/overview") is None
     assert _extract_llms_full_section(sample, "nope/not-here") is None
+
+
+def test_format_tool_response_appends_scope_tip_to_substantive_output():
+    result = _format_tool_response("Heading\n" + "=" * 80 + "\nSome tabular output")
+    assert result.endswith(MCP_SCOPE_TIP)
+
+
+def test_format_tool_response_skips_tiny_status_and_errors():
+    assert MCP_SCOPE_TIP not in _format_tool_response("HEC-RAS Version: 6.6")
+    assert MCP_SCOPE_TIP not in _format_tool_response("Error reading compute messages: failed")
+
+
+def test_format_tool_response_appends_scope_tip_after_truncation():
+    result = _format_tool_response(("abcdefghij " * 20).strip(), max_tokens=10)
+    assert "[OUTPUT TRUNCATED" in result
+    assert result.endswith(MCP_SCOPE_TIP)
 
 
 # ---------------------------------------------------------------------------
