@@ -1,154 +1,74 @@
-#!/usr/bin/env python3
-"""
-Direct test of the MCP server functionality
-"""
+import asyncio
+from types import SimpleNamespace
 
-import sys
-from pathlib import Path
+import pandas as pd
+import pytest
+from fastmcp.exceptions import ToolError
 
-# Add parent directory to path to import server
-sys.path.insert(0, str(Path(__file__).parent.parent))
-
-# Import the tool functions directly
-from server import (
-    hecras_project_summary,
-    read_plan_description,
-    get_compute_messages,
-    get_plan_results_summary,
-    get_hdf_structure,
-    get_projection_info,
-    mcp,
-)
+import server
 
 
-def test_server():
-    """Test the server functions directly"""
-    print("Testing HEC-RAS MCP Server...")
-    print("=" * 60)
+def test_mcp_registers_expected_tools():
+    tools = asyncio.run(server.mcp.list_tools())
+    tool_names = {tool.name for tool in tools}
 
-    # Test listing tools via FastMCP (async API)
-    import asyncio
-    print("\n1. Testing tool listing...")
-    tools = asyncio.run(mcp.list_tools())
-    print(f"Found {len(tools)} tools:")
-    for tool in tools:
-        print(f"  - {tool.name}: {tool.description}")
-
-    # Test querying the Muncie project
-    print("\n2. Testing hecras_project_summary with Muncie data...")
-    muncie_path = Path(__file__).parent.parent / "testdata" / "Muncie"
-    muncie_path = muncie_path.resolve()
-
-    try:
-        result = hecras_project_summary(project_path=str(muncie_path))
-        print("Result:")
-        print(result[:1000] + "..." if len(result) > 1000 else result)
-    except Exception as e:
-        print(f"Error: {e}")
-
-    # Test getting project summary (plans only)
-    print("\n3. Testing hecras_project_summary (plans only)...")
-    try:
-        result = hecras_project_summary(
-            project_path=str(muncie_path),
-            show_plan_df=True,
-            show_geom_df=False,
-            show_flow_df=False,
-            show_unsteady_df=False,
-            show_boundaries=False,
-        )
-        print("Result:")
-        print(result[:500] + "..." if len(result) > 500 else result)
-    except Exception as e:
-        print(f"Error: {e}")
+    assert {
+        "hecras_project_summary",
+        "read_plan_description",
+        "get_plan_results_summary",
+        "get_compute_messages",
+        "get_hdf_structure",
+        "get_projection_info",
+        "search_docs",
+        "get_doc_page",
+    }.issubset(tool_names)
 
 
-def test_new_tools():
-    """Test the new HEC-RAS tools"""
-    print("\n\nTesting NEW HEC-RAS MCP Tools...")
-    print("=" * 60)
+def test_init_project_returns_validated_path_and_ras(monkeypatch, project_dir, fake_ras):
+    calls = []
 
-    muncie_path = Path(__file__).parent.parent / "testdata" / "Muncie"
-    muncie_path = muncie_path.resolve()
+    def fake_init_ras_project(project_path, ras_version):
+        calls.append((project_path, ras_version))
+        return fake_ras
 
-    # Test compute messages
-    print("\n4. Testing get_compute_messages...")
-    try:
-        result = get_compute_messages(
-            project_path=str(muncie_path),
-            plan_number="01",
-        )
-        print("Result:")
-        print(result[:800] + "..." if len(result) > 800 else result)
-    except Exception as e:
-        print(f"Error: {e}")
+    monkeypatch.setattr(server, "init_ras_project", fake_init_ras_project)
 
-    # Test plan results summary
-    print("\n5. Testing get_plan_results_summary...")
-    try:
-        result = get_plan_results_summary(
-            project_path=str(muncie_path),
-            plan_number="01",
-        )
-        print("Result:")
-        print(result[:1000] + "..." if len(result) > 1000 else result)
-    except Exception as e:
-        print(f"Error: {e}")
+    path, ras = server._init_project(str(project_dir))
 
-    # Find a plan HDF file to test with
-    plan_hdf_files = list(muncie_path.glob("*.p*.hdf"))
-    if plan_hdf_files:
-        test_hdf = plan_hdf_files[0]
-
-        # Test HDF structure (paths only for Summary)
-        print(f"\n6. Testing get_hdf_structure with {test_hdf.name}...")
-        try:
-            result = get_hdf_structure(
-                hdf_path=str(test_hdf),
-                group_path="/Results/Summary",
-                paths_only=True,
-            )
-            print("Result (first 1000 chars):")
-            print(result[:1000] + "..." if len(result) > 1000 else result)
-        except Exception as e:
-            print(f"Error: {e}")
-
-    # Find a geometry HDF file for projection test
-    geom_hdf_files = list(muncie_path.glob("*.g*.hdf"))
-    if geom_hdf_files:
-        geom_hdf = geom_hdf_files[0]
-
-        # Test projection info
-        print(f"\n7. Testing get_projection_info with {geom_hdf.name}...")
-        try:
-            result = get_projection_info(hdf_path=str(geom_hdf))
-            print("Result:")
-            print(result)
-        except Exception as e:
-            print(f"Error: {e}")
+    assert path == project_dir
+    assert ras is fake_ras
+    assert calls == [(project_dir, server.HECRAS_VERSION)]
 
 
-def test_read_plan_description():
-    """Test the read_plan_description tool"""
-    print("\n\nTesting read_plan_description tool...")
-    print("=" * 60)
+def test_init_project_invalid_folder_raises_tool_error(tmp_path):
+    missing_path = tmp_path / "missing-project"
 
-    muncie_path = Path(__file__).parent.parent / "testdata" / "Muncie"
-    muncie_path = muncie_path.resolve()
-
-    print("\n8. Testing read_plan_description...")
-    try:
-        result = read_plan_description(
-            project_path=str(muncie_path),
-            plan_number="01",
-        )
-        print("Result:")
-        print(result)
-    except Exception as e:
-        print(f"Error: {e}")
+    with pytest.raises(ToolError, match="does not exist or is not a directory"):
+        server._init_project(str(missing_path))
 
 
-if __name__ == "__main__":
-    test_server()
-    test_new_tools()
-    test_read_plan_description()
+def test_resolve_plan_hdf_path_accepts_single_digit_plan(project_dir, fake_ras, plan_hdf_path):
+    resolved = server._resolve_plan_hdf_path(project_dir, "1", fake_ras)
+
+    assert resolved == plan_hdf_path
+
+
+def test_resolve_plan_hdf_path_accepts_existing_hdf_path(project_dir, plan_hdf_path):
+    ras_without_plans = SimpleNamespace(plan_df=pd.DataFrame())
+
+    resolved = server._resolve_plan_hdf_path(project_dir, str(plan_hdf_path), ras_without_plans)
+
+    assert resolved == plan_hdf_path
+
+
+def test_resolve_plan_hdf_path_falls_back_to_project_name_pattern(project_dir, plan_hdf_path):
+    ras_without_plans = SimpleNamespace(plan_df=None)
+
+    resolved = server._resolve_plan_hdf_path(project_dir, "01", ras_without_plans)
+
+    assert resolved == plan_hdf_path
+
+
+def test_resolve_plan_hdf_path_missing_plan_raises_tool_error(project_dir, fake_ras):
+    with pytest.raises(ToolError, match="Plan '99' not found"):
+        server._resolve_plan_hdf_path(project_dir, "99", fake_ras)

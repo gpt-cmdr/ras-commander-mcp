@@ -33,5 +33,10 @@ dev-dependencies = [
     "pytest-asyncio>=0.20.0"
 ]
 
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+addopts = "-ra"
+
 [tool.hatch.build.targets.wheel]
 packages = ["."]
