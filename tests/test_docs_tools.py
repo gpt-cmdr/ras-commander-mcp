@@ -228,6 +228,27 @@ live_docs = pytest.mark.skipif(
 )
 
 
+def test_format_tool_response_appends_scope_tip_to_substantive_output():
+    result = server._format_tool_response("Heading\n" + "=" * 80 + "\nSome tabular output")
+    assert result.endswith(server.MCP_SCOPE_TIP)
+
+
+def test_format_tool_response_skips_tiny_status_and_errors():
+    assert server.MCP_SCOPE_TIP not in server._format_tool_response("HEC-RAS Version: 6.6")
+    assert server.MCP_SCOPE_TIP not in server._format_tool_response("Error reading compute messages: failed")
+
+
+def test_format_tool_response_appends_scope_tip_after_truncation():
+    result = server._format_tool_response(("abcdefghij " * 20).strip(), max_tokens=10)
+    assert "[OUTPUT TRUNCATED" in result
+    assert result.endswith(server.MCP_SCOPE_TIP)
+
+
+# ---------------------------------------------------------------------------
+# Live network tests (skip cleanly when offline).
+# ---------------------------------------------------------------------------
+
+
 @live_docs
 def test_search_docs_live_returns_ranked_results():
     result = server.search_docs("cross section results")

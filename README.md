@@ -10,10 +10,21 @@ The RAS Commander MCP (Model Context Protocol) server provides tools for queryin
 
 For a demonstration of CLB's H&H automation services, contact us at info@clbengineering.com
 
+## When to use the MCP vs. ras-commander directly
+
+| Need | Best fit |
+| --- | --- |
+| Richest, most capable workflow | Use a local coding agent (Claude Code or Codex) directly with the [ras-commander](https://github.com/gpt-cmdr/ras-commander) library and repository. This gives access to the full Python API surface: scripting, notebooks, batch automation, custom analysis, and geometry/results extraction beyond what any fixed tool set exposes. |
+| Simple/basic MCP queries | Use this MCP server for a deliberately limited subset of ras-commander: project info, plan results, HDF structure, and geometry element listings. It is especially useful from Claude Desktop and other MCP clients where running a full agent against the repo is not practical. |
+
+Rule of thumb: if your workflow needs custom logic, iteration, writing files, or the broader API, use ras-commander directly with a local agent.
+
 ## Features
 
 - Query comprehensive HEC-RAS project information (plans, geometries, flows, boundaries)
+- List HEC-RAS geometry elements including 1D rivers/reaches, cross sections, 2D reference lines, boundary lines, breaklines, structures, and mesh areas
 - Extract detailed plan results including unsteady simulation info and runtime metrics
+- Query computed plan results directly, including profile lists, plan summary metrics, 2D mesh cells, and 1D cross sections
 - Explore HDF file structures and extract computation messages
 - Support for multiple HEC-RAS versions (6.5, 6.6, etc.)
 - Formatted text output suitable for LLM interaction
@@ -21,13 +32,6 @@ For a demonstration of CLB's H&H automation services, contact us at info@clbengi
 
 ## Future Features
 
-- List Geometry Elements
-    1D List Rivers/Reaches
-    1D Cross Sections by River and Reach
-    2D Reference Lines
-    Boundary Lines
-    1D and 2D Structures
-    
 - Summary Results at Boundaries (Max WSE and Max Flow)
 - Also Structures (list them all with max wse and max flow)
 - Detailed XSEC results table (by river/reach) for debugging
@@ -207,28 +211,72 @@ All tools provided by this MCP server leverage the [ras-commander](https://githu
      - `project_path` (required): Full path to HEC-RAS project folder
      - `plan_number` (required): Plan number or full path to plan HDF file
 
-4. **get_compute_messages**: Get computation messages and performance metrics
+4. **list_profiles**: List available steady profiles or unsteady output time steps for a computed plan
    - Parameters:
      - `project_path` (required): Full path to HEC-RAS project folder
      - `plan_number` (required): Plan number or full path to plan HDF file
 
-5. **get_hdf_structure**: Explore HDF file structure
+5. **get_plan_summary**: Get plan-level result statistics, including max WSEL, peak flow, volume accounting, and runtime timing
+   - Parameters:
+     - `project_path` (required): Full path to HEC-RAS project folder
+     - `plan_number` (required): Plan number or full path to plan HDF file
+     - `max_rows` (optional): Maximum rows to show in each table (default: 100)
+
+6. **get_mesh_results**: Get 2D mesh cell results for a plan profile/time step or maximum-over-time profile
+   - Parameters:
+     - `project_path` (required): Full path to HEC-RAS project folder
+     - `plan_number` (required): Plan number or full path to plan HDF file
+     - `profile` (optional): Output index, datetime from `list_profiles`, or `max` (default: "max")
+     - `mesh_name` (optional): 2D flow area name, or blank for all meshes
+     - `variables` (optional): Comma-separated variables such as `Water Surface,Depth,Velocity`
+     - `max_rows` (optional): Maximum rows to show per mesh (default: 100)
+
+7. **get_xsec_results**: Get 1D cross-section WSEL, flow, and velocity results for a plan profile/time step
+   - Parameters:
+     - `project_path` (required): Full path to HEC-RAS project folder
+     - `plan_number` (required): Plan number or full path to plan HDF file
+     - `profile` (optional): Output index, datetime/profile name from `list_profiles`, or `max` (default: "max")
+     - `variables` (optional): Comma-separated variables such as `Water_Surface,Flow,Velocity_Total`
+     - `max_rows` (optional): Maximum rows to show (default: 100)
+
+8. **get_compute_messages**: Get computation messages and performance metrics
+   - Parameters:
+     - `project_path` (required): Full path to HEC-RAS project folder
+     - `plan_number` (required): Plan number or full path to plan HDF file
+
+9. **get_hdf_structure**: Explore HDF file structure
    - Parameters:
      - `hdf_path` (required): Full path to the HDF file
      - `group_path` (optional): Internal HDF path to start exploration from (default: "/")
      - `paths_only` (optional): Show only paths without details (default: false)
 
-6. **get_projection_info**: Get spatial projection information (WKT)
+10. **get_projection_info**: Get spatial projection information (WKT)
    - Parameters:
      - `hdf_path` (required): Full path to the HDF file
 
-7. **search_docs**: Search the ras-commander documentation and return the top matching pages with excerpts (read-only docs retrieval; requires network)
+11. **search_docs**: Search the ras-commander documentation and return the top matching pages with excerpts (read-only docs retrieval; requires network)
    - Parameters:
      - `query` (required): Search terms (e.g., "cross section results")
 
-8. **get_doc_page**: Retrieve the markdown/text content of a documentation page by path (read-only docs retrieval; requires network)
+12. **get_doc_page**: Retrieve the markdown/text content of a documentation page by path (read-only docs retrieval; requires network)
    - Parameters:
      - `path` (required): Page path, e.g. `reference/dataframe-reference` (leading/trailing slashes optional)
+
+13. **list_geometry_elements**: List major geometry elements from geometry HDF files
+   - Geometry types:
+     - `rivers_reaches`: 1D river and reach alignment lines
+     - `cross_sections`: 1D cross-section cut lines by river, reach, and station
+     - `reference_lines`: 2D profile-output reference lines, optionally filtered by mesh area
+     - `bc_lines`: 2D flow area boundary condition lines
+     - `breaklines`: 2D mesh enforcement lines
+     - `structures`: bridges, culverts, inline structures, and lateral structures
+     - `mesh_areas`: named 2D flow areas
+   - Parameters:
+     - `project_path` (required): Full path to HEC-RAS project folder
+     - `geometry_number` (optional): Geometry number such as `1`, `01`, or `g01`; full geometry HDF paths are also accepted. Defaults to all geometry HDF files found in the project.
+     - `element_type` (optional): One of the geometry types above, common aliases such as `xs` or `boundary_lines`, or `all` (default)
+     - `mesh_name` (optional): Filter 2D reference lines to a specific mesh area
+     - `showmore` (optional): Show more attributes while still omitting raw geometry/detail columns (default: false)
 
 > **Docs tools (`search_docs`, `get_doc_page`)** are read-only documentation retrieval and stay
 > within the MCP's stated scope (introspection / QAQC / review — never HEC-RAS execution). They
@@ -242,9 +290,15 @@ Once configured, you can ask Claude:
 - "Query the HEC-RAS project at C:/Projects/MyRiverModel"
 - "Show me the plans in the Muncie test project"
 - "Get the results summary for plan '01' in my project"
+- "List the output profiles for plan '01'"
+- "Show max 2D mesh WSEL, depth, and velocity for plan '01'"
+- "Get cross-section WSEL and peak flow results for plan '01'"
 - "Show me the compute messages for plan '1'"
 - "Explore the HDF structure of my results file"
 - "Get the projection info from my terrain HDF"
+- "List all geometry elements for the model"
+- "List cross sections for geometry g01"
+- "Show 2D boundary lines and mesh areas"
 - "Search the ras-commander docs for cross section results"
 - "Show me the dataframe-reference documentation page"
 
