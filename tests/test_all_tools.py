@@ -14,6 +14,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from server import (
     hecras_project_summary,
+    list_geometry_elements,
     read_plan_description,
     get_mesh_results,
     get_plan_summary,
@@ -169,6 +170,17 @@ class ToolTester:
                 "show_boundaries": False,
                 "show_rasmap": False,
                 "showmore": True
+            }
+        )
+
+        # Test 5.5: List geometry elements
+        self.test_tool(
+            list_geometry_elements,
+            "list_geometry_elements",
+            "List major geometry elements (XS, reference lines, boundary lines, structures, mesh areas)",
+            {
+                "project_path": str(self.project_path),
+                "element_type": "all"
             }
         )
 

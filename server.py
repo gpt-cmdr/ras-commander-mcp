@@ -27,10 +27,14 @@ try:
         init_ras_project,
         HdfBase,
         HdfPlan,
-        HdfResultsMesh,
         HdfResultsPlan,
+        HdfResultsMesh,
         HdfResultsXsec,
         RasPlan,
+        HdfXsec,
+        HdfBndry,
+        HdfStruc,
+        HdfMesh,
     )
     import h5py
     import numpy as np
@@ -77,6 +81,139 @@ _NO_SCOPE_TIP_PREFIXES = (
     "Unexpected data type",
     "No documentation matches found",
 )
+
+# Geometry element listing configuration
+GEOMETRY_ELEMENT_TYPES = [
+    "rivers_reaches",
+    "cross_sections",
+    "reference_lines",
+    "bc_lines",
+    "breaklines",
+    "structures",
+    "mesh_areas",
+]
+
+GEOMETRY_ELEMENT_ALIASES = {
+    "all": GEOMETRY_ELEMENT_TYPES,
+    "everything": GEOMETRY_ELEMENT_TYPES,
+    "rivers": ["rivers_reaches"],
+    "river": ["rivers_reaches"],
+    "reaches": ["rivers_reaches"],
+    "reach": ["rivers_reaches"],
+    "rivers_reaches": ["rivers_reaches"],
+    "river_reaches": ["rivers_reaches"],
+    "river_centerlines": ["rivers_reaches"],
+    "xs": ["cross_sections"],
+    "xsec": ["cross_sections"],
+    "xsecs": ["cross_sections"],
+    "cross_sections": ["cross_sections"],
+    "cross_section": ["cross_sections"],
+    "reference_lines": ["reference_lines"],
+    "reference_line": ["reference_lines"],
+    "ref_lines": ["reference_lines"],
+    "ref_line": ["reference_lines"],
+    "2d_reference_lines": ["reference_lines"],
+    "bc_lines": ["bc_lines"],
+    "bc_line": ["bc_lines"],
+    "boundary_lines": ["bc_lines"],
+    "boundary_line": ["bc_lines"],
+    "boundary_condition_lines": ["bc_lines"],
+    "boundary_condition_line": ["bc_lines"],
+    "2d_boundary_lines": ["bc_lines"],
+    "breaklines": ["breaklines"],
+    "breakline": ["breaklines"],
+    "2d_breaklines": ["breaklines"],
+    "structures": ["structures"],
+    "structure": ["structures"],
+    "mesh_areas": ["mesh_areas"],
+    "mesh_area": ["mesh_areas"],
+    "meshes": ["mesh_areas"],
+    "mesh": ["mesh_areas"],
+    "2d_areas": ["mesh_areas"],
+    "2d_area": ["mesh_areas"],
+}
+
+GEOMETRY_COLUMN_PRIORITY = {
+    "rivers_reaches": [
+        "River",
+        "River Name",
+        "Reach",
+        "Reach Name",
+        "Name",
+        "river_id",
+        "geometry_type",
+    ],
+    "cross_sections": [
+        "River",
+        "River Name",
+        "Reach",
+        "Reach Name",
+        "RS",
+        "River Station",
+        "Name",
+        "Description",
+        "Left Bank",
+        "Right Bank",
+        "n_lob",
+        "n_channel",
+        "n_rob",
+        "geometry_type",
+    ],
+    "reference_lines": [
+        "refln_id",
+        "Name",
+        "mesh_name",
+        "SA-2D",
+        "Type",
+        "geometry_type",
+    ],
+    "bc_lines": [
+        "bc_line_id",
+        "Name",
+        "SA-2D",
+        "Type",
+        "geometry_type",
+    ],
+    "breaklines": [
+        "bl_id",
+        "breakline_id",
+        "Name",
+        "mesh_name",
+        "SA-2D",
+        "Type",
+        "geometry_type",
+    ],
+    "structures": [
+        "Structure ID",
+        "Name",
+        "Type",
+        "River",
+        "River Name",
+        "Reach",
+        "Reach Name",
+        "RS",
+        "River Station",
+        "Description",
+        "geometry_type",
+    ],
+}
+
+GEOMETRY_RAW_COLUMNS = {
+    "geometry",
+    "station_elevation",
+    "mannings_n",
+    "ineffective_blocks",
+    "obstruction_blocks",
+    "profile_data",
+    "profiles",
+    "points",
+    "stations",
+    "centerline points",
+    "centerline info",
+    "polyline points",
+    "polyline parts",
+    "polyline info",
+}
 
 
 # ---------------------------------------------------------------------------
@@ -337,6 +474,293 @@ def dataframe_to_text(df: pd.DataFrame, name: str, df_type: str = None, showmore
         result += f" ({omitted_count} columns omitted - use showmore=True to see all)"
     result += f"\n{buffer.getvalue()}\n"
     return result
+
+
+def _is_blank(value: Any) -> bool:
+    """Return True when a scalar-like value should be treated as unset."""
+    if value is None:
+        return True
+    text = str(value).strip()
+    return text == "" or text.lower() in {"none", "nan", "nat"}
+
+
+def _normalize_geometry_number(value: Any) -> str:
+    """Normalize HEC-RAS geometry selectors like 1, 01, and g01."""
+    if _is_blank(value):
+        return ""
+
+    text = str(value).strip()
+    name = Path(text).name
+    if name.lower().endswith(".hdf"):
+        name = Path(name).stem
+
+    token = name.split(".")[-1]
+    if token.lower().startswith("g") and token[1:].isdigit():
+        token = token[1:]
+
+    if token.isdigit():
+        return token.zfill(2)
+
+    return token.lower()
+
+
+def _geometry_hdf_candidates(project_path: Path, project_name: str, geometry_number: str) -> list[Path]:
+    """Build likely geometry HDF paths for a normalized geometry number."""
+    if not geometry_number:
+        return []
+
+    geom_file = f"g{geometry_number}"
+    candidates = [
+        project_path / f"{project_name}.{geom_file}.hdf",
+        project_path / f"{project_path.name}.{geom_file}.hdf",
+    ]
+
+    unique_candidates = []
+    for candidate in candidates:
+        if candidate not in unique_candidates:
+            unique_candidates.append(candidate)
+    return unique_candidates
+
+
+def _path_from_project_value(project_path: Path, value: Any) -> Path | None:
+    """Convert a path-like project metadata value to an absolute path."""
+    if _is_blank(value):
+        return None
+
+    path = Path(str(value).strip())
+    if not path.is_absolute():
+        path = project_path / path
+    return path
+
+
+def _geometry_hdf_from_row(project_path: Path, project_name: str, row: pd.Series) -> Path | None:
+    """Resolve a geometry HDF path from a ras.geom_df row."""
+    hdf_columns = [
+        "hdf_path",
+        "HDF Geometry Path",
+        "Geometry HDF Path",
+        "Geom HDF Path",
+        "HDF Path",
+    ]
+    for column in hdf_columns:
+        if column in row and not _is_blank(row[column]):
+            path = _path_from_project_value(project_path, row[column])
+            if path:
+                return path
+
+    file_path_columns = ["full_path", "Geom Path", "Geometry Path"]
+    for column in file_path_columns:
+        if column in row and not _is_blank(row[column]):
+            path = _path_from_project_value(project_path, row[column])
+            if path:
+                if path.suffix.lower() != ".hdf":
+                    path = Path(f"{path}.hdf")
+                return path
+
+    for column in ["geom_number", "geometry_number", "Geom File", "geom_file"]:
+        if column in row and not _is_blank(row[column]):
+            geom_number = _normalize_geometry_number(row[column])
+            for path in _geometry_hdf_candidates(project_path, project_name, geom_number):
+                return path
+
+    return None
+
+
+def _row_matches_geometry_selector(row: pd.Series, selector: str) -> bool:
+    """Return True when a ras.geom_df row matches a user geometry selector."""
+    if not selector:
+        return True
+
+    selector_number = _normalize_geometry_number(selector)
+    selector_text = str(selector).strip().lower()
+
+    for value in row.values:
+        if _is_blank(value):
+            continue
+
+        value_text = str(value).strip().lower()
+        value_number = _normalize_geometry_number(value)
+        if value_number and selector_number and value_number == selector_number:
+            return True
+        if value_text == selector_text:
+            return True
+        if Path(value_text).name == selector_text:
+            return True
+
+    return False
+
+
+def _geometry_label(path: Path, row: pd.Series | None = None) -> str:
+    """Create a concise label for a geometry HDF path."""
+    if row is not None:
+        for column in ["geom_file", "Geom File", "geom_number", "geometry_number"]:
+            if column in row and not _is_blank(row[column]):
+                geom_number = _normalize_geometry_number(row[column])
+                if geom_number:
+                    return f"g{geom_number}"
+                return str(row[column]).strip()
+    return path.stem
+
+
+def _resolve_geometry_hdf_paths(project_path: Path, geometry_number: str, ras) -> list[tuple[str, Path]]:
+    """Resolve one or more geometry HDF paths from project metadata."""
+    selector = (geometry_number or "").strip()
+    project_name = getattr(ras, "project_name", project_path.name)
+
+    if selector:
+        selector_path = Path(selector)
+        if selector_path.suffix.lower() == ".hdf":
+            if not selector_path.is_absolute():
+                selector_path = project_path / selector_path
+            if not selector_path.exists():
+                raise ToolError(f"The specified geometry HDF file does not exist: {selector_path}")
+            return [(_geometry_label(selector_path), selector_path)]
+
+    resolved_paths: list[tuple[str, Path]] = []
+    geom_df = getattr(ras, "geom_df", None)
+    if geom_df is not None and not geom_df.empty:
+        for _, row in geom_df.iterrows():
+            if not _row_matches_geometry_selector(row, selector):
+                continue
+
+            hdf_path = _geometry_hdf_from_row(project_path, project_name, row)
+            if hdf_path and hdf_path.exists():
+                resolved_paths.append((_geometry_label(hdf_path, row), hdf_path))
+
+    if not resolved_paths:
+        selector_number = _normalize_geometry_number(selector)
+        globbed_paths = sorted(project_path.glob("*.g*.hdf"))
+        for hdf_path in globbed_paths:
+            if selector_number and _normalize_geometry_number(hdf_path.name) != selector_number:
+                continue
+            resolved_paths.append((_geometry_label(hdf_path), hdf_path))
+
+    if resolved_paths:
+        unique_paths: list[tuple[str, Path]] = []
+        seen = set()
+        for label, hdf_path in resolved_paths:
+            resolved = hdf_path.resolve()
+            if resolved in seen:
+                continue
+            seen.add(resolved)
+            unique_paths.append((label, hdf_path))
+        return unique_paths
+
+    if selector:
+        raise ToolError(
+            f"Geometry '{selector}' was not found or does not have an existing geometry HDF file"
+        )
+
+    raise ToolError(
+        "No geometry HDF files were found for this project. "
+        "Run or save the HEC-RAS geometry so a .gNN.hdf file exists."
+    )
+
+
+def _normalize_geometry_element_type(element_type: str) -> list[str]:
+    """Normalize a geometry element type or alias to one or more internal keys."""
+    normalized = (element_type or "all").strip().lower()
+    normalized = normalized.replace("-", "_").replace(" ", "_").replace("/", "_")
+
+    element_types = GEOMETRY_ELEMENT_ALIASES.get(normalized)
+    if not element_types:
+        valid_types = ", ".join(["all"] + GEOMETRY_ELEMENT_TYPES)
+        raise ToolError(f"Unknown geometry element type '{element_type}'. Use one of: {valid_types}")
+    return element_types
+
+
+def _format_geometry_dataframe(df: Any, name: str, element_type: str, showmore: bool = False) -> str:
+    """Format geometry GeoDataFrames as concise element listings."""
+    if df is None:
+        return f"\n{name}: No elements found\n"
+
+    if not isinstance(df, pd.DataFrame):
+        df = pd.DataFrame(df)
+
+    if df.empty:
+        return f"\n{name}: No elements found\n"
+
+    display_df = pd.DataFrame(df).copy()
+    raw_column_names = {column.lower() for column in GEOMETRY_RAW_COLUMNS}
+    raw_columns = [
+        column for column in display_df.columns
+        if str(column).strip().lower() in raw_column_names
+    ]
+
+    geometry_columns = [
+        column for column in raw_columns
+        if str(column).strip().lower() == "geometry"
+    ]
+    if geometry_columns and "geometry_type" not in display_df.columns:
+        geometry_series = display_df[geometry_columns[0]]
+        display_df["geometry_type"] = geometry_series.apply(
+            lambda geom: getattr(geom, "geom_type", type(geom).__name__) if geom is not None else ""
+        )
+
+    omitted_count = len(raw_columns)
+    if raw_columns:
+        display_df = display_df.drop(columns=raw_columns)
+
+    if not showmore:
+        priority_columns = [
+            column for column in GEOMETRY_COLUMN_PRIORITY.get(element_type, [])
+            if column in display_df.columns
+        ]
+        supplemental_columns = [
+            column for column in display_df.columns
+            if column not in priority_columns
+            and (
+                "name" in str(column).lower()
+                or "river" in str(column).lower()
+                or "reach" in str(column).lower()
+                or str(column).lower().endswith("id")
+            )
+        ]
+        selected_columns = (priority_columns + supplemental_columns)[:12]
+        if not selected_columns:
+            selected_columns = list(display_df.columns[:8])
+
+        omitted_count += len([column for column in display_df.columns if column not in selected_columns])
+        display_df = display_df[selected_columns]
+
+    if display_df.empty:
+        return f"\n{name} ({len(df)} element(s)): No concise attributes available\n"
+
+    buffer = io.StringIO()
+    display_df.to_string(buf=buffer, max_rows=100, max_cols=None, index=False)
+
+    result = f"\n{name} ({len(df)} element(s))"
+    if omitted_count > 0:
+        if showmore:
+            result += f" ({omitted_count} raw/detail column(s) omitted)"
+        else:
+            result += f" ({omitted_count} columns omitted - use showmore=True to see more attributes)"
+    result += f":\n{buffer.getvalue()}\n"
+    return result
+
+
+def _format_mesh_area_names(mesh_area_names: list[str]) -> str:
+    """Format 2D mesh area names as a concise list."""
+    if not mesh_area_names:
+        return "\n2D MESH AREAS: No elements found\n"
+
+    lines = [f"\n2D MESH AREAS ({len(mesh_area_names)} element(s)):"]
+    for index, mesh_area_name in enumerate(mesh_area_names, start=1):
+        lines.append(f"{index}. {mesh_area_name}")
+    lines.append("")
+    return "\n".join(lines)
+
+
+def _get_river_reaches(hdf_path: Path) -> pd.DataFrame:
+    """Extract 1D river/reach lines, falling back to centerlines when needed."""
+    try:
+        river_reaches = HdfXsec.get_river_reaches(hdf_path, datetime_to_str=True)
+        if river_reaches is not None and not river_reaches.empty:
+            return river_reaches
+    except Exception:
+        logger.info("River reaches unavailable; trying river centerlines", exc_info=True)
+
+    return HdfXsec.get_river_centerlines(hdf_path, datetime_to_str=True)
 
 
 def _decode_hdf_value(value: Any) -> Any:
@@ -1041,6 +1465,118 @@ def hecras_project_summary(
 
     if show_rasmap and hasattr(ras, 'rasmap_df') and ras.rasmap_df is not None:
         response_parts.append(dataframe_to_text(ras.rasmap_df, "RASMAP CONFIGURATION", "rasmap_df", showmore))
+
+    return _format_response_parts(response_parts)
+
+
+@mcp.tool(annotations={"readOnlyHint": True})
+def list_geometry_elements(
+    project_path: str,
+    geometry_number: str = "",
+    element_type: str = "all",
+    mesh_name: str = "",
+    showmore: bool = False,
+) -> str:
+    """List HEC-RAS geometry elements from geometry HDF files. Element types: rivers_reaches are 1D river/reach lines; cross_sections are 1D XS cut lines by river/reach/station; reference_lines are 2D profile-output lines; bc_lines are 2D boundary condition lines; breaklines are 2D mesh enforcement lines; structures are bridges, culverts, inline structures, and lateral structures; mesh_areas are named 2D flow areas."""
+    path, ras = _init_project(project_path)
+    geometry_hdf_paths = _resolve_geometry_hdf_paths(path, geometry_number, ras)
+    selected_element_types = _normalize_geometry_element_type(element_type)
+    mesh_filter = mesh_name.strip() or None
+
+    response_parts = [
+        f"Geometry Elements for: {ras.project_name}",
+        f"Project Path: {path}",
+        get_ras_version_info(),
+        f"Geometry filter: {geometry_number or 'all geometries'}",
+        f"Element type: {element_type or 'all'}",
+        "=" * 80,
+        "Geometry type guide:",
+        "- 1D rivers/reaches: river and reach alignment lines used by 1D geometry",
+        "- Cross sections: 1D XS cut lines listed by river, reach, and station",
+        "- Reference lines: 2D profile-output lines, optionally filtered by mesh_name",
+        "- Boundary condition lines: 2D flow area boundary condition lines",
+        "- Breaklines: 2D mesh enforcement lines",
+        "- Structures: bridges, culverts, inline structures, and lateral structures",
+        "- Mesh areas: named 2D flow areas",
+    ]
+
+    if mesh_filter:
+        response_parts.append(f"Reference line mesh filter: {mesh_filter}")
+
+    def append_dataframe_section(section_name: str, key: str, extractor) -> None:
+        try:
+            section_df = extractor()
+            response_parts.append(_format_geometry_dataframe(section_df, section_name, key, showmore))
+        except Exception as e:
+            logger.error(f"Error listing {section_name}: {str(e)}")
+            response_parts.append(f"\n{section_name}: Error reading elements: {str(e)}\n")
+
+    for label, hdf_path in geometry_hdf_paths:
+        response_parts.extend([
+            "",
+            f"GEOMETRY {label}: {hdf_path}",
+            "-" * 80,
+        ])
+
+        if "rivers_reaches" in selected_element_types:
+            append_dataframe_section(
+                "1D RIVERS/REACHES",
+                "rivers_reaches",
+                lambda hdf_path=hdf_path: _get_river_reaches(hdf_path),
+            )
+
+        if "cross_sections" in selected_element_types:
+            append_dataframe_section(
+                "1D CROSS SECTIONS",
+                "cross_sections",
+                lambda hdf_path=hdf_path: HdfXsec.get_cross_sections(
+                    hdf_path,
+                    datetime_to_str=True,
+                    ras_object=ras,
+                ),
+            )
+
+        if "reference_lines" in selected_element_types:
+            append_dataframe_section(
+                "2D REFERENCE LINES",
+                "reference_lines",
+                lambda hdf_path=hdf_path: HdfBndry.get_reference_lines(
+                    hdf_path,
+                    mesh_name=mesh_filter,
+                ),
+            )
+
+        if "bc_lines" in selected_element_types:
+            append_dataframe_section(
+                "2D BOUNDARY CONDITION LINES",
+                "bc_lines",
+                lambda hdf_path=hdf_path: HdfBndry.get_bc_lines(hdf_path),
+            )
+
+        if "breaklines" in selected_element_types:
+            append_dataframe_section(
+                "2D BREAKLINES",
+                "breaklines",
+                lambda hdf_path=hdf_path: HdfBndry.get_breaklines(hdf_path),
+            )
+
+        if "structures" in selected_element_types:
+            append_dataframe_section(
+                "STRUCTURES",
+                "structures",
+                lambda hdf_path=hdf_path: HdfStruc.get_structures(
+                    hdf_path,
+                    datetime_to_str=True,
+                ),
+            )
+
+        if "mesh_areas" in selected_element_types:
+            try:
+                mesh_area_names = HdfMesh.get_mesh_area_names(hdf_path)
+                response_parts.append(_format_mesh_area_names(mesh_area_names))
+            except Exception as e:
+                logger.error(f"Error listing mesh areas: {str(e)}")
+                response_parts.append(f"\n2D MESH AREAS: Error reading elements: {str(e)}\n")
 
     return _format_response_parts(response_parts)
 
