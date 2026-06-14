@@ -15,9 +15,13 @@ from server import (
     list_geometry_elements,
     read_plan_description,
     get_compute_messages,
+    get_mesh_results,
+    get_plan_summary,
     get_plan_results_summary,
+    get_xsec_results,
     get_hdf_structure,
     get_projection_info,
+    list_profiles,
     mcp,
 )
 
@@ -90,6 +94,58 @@ def test_new_tools():
         result = get_plan_results_summary(
             project_path=str(muncie_path),
             plan_number="01",
+        )
+        print("Result:")
+        print(result[:1000] + "..." if len(result) > 1000 else result)
+    except Exception as e:
+        print(f"Error: {e}")
+
+    # Test output profile listing
+    print("\n5.1. Testing list_profiles...")
+    try:
+        result = list_profiles(
+            project_path=str(muncie_path),
+            plan_number="01",
+        )
+        print("Result:")
+        print(result[:1000] + "..." if len(result) > 1000 else result)
+    except Exception as e:
+        print(f"Error: {e}")
+
+    # Test plan summary metrics
+    print("\n5.2. Testing get_plan_summary...")
+    try:
+        result = get_plan_summary(
+            project_path=str(muncie_path),
+            plan_number="01",
+        )
+        print("Result:")
+        print(result[:1000] + "..." if len(result) > 1000 else result)
+    except Exception as e:
+        print(f"Error: {e}")
+
+    # Test 2D mesh results
+    print("\n5.3. Testing get_mesh_results...")
+    try:
+        result = get_mesh_results(
+            project_path=str(muncie_path),
+            plan_number="01",
+            profile="max",
+            max_rows=10,
+        )
+        print("Result:")
+        print(result[:1000] + "..." if len(result) > 1000 else result)
+    except Exception as e:
+        print(f"Error: {e}")
+
+    # Test 1D cross-section results
+    print("\n5.4. Testing get_xsec_results...")
+    try:
+        result = get_xsec_results(
+            project_path=str(muncie_path),
+            plan_number="01",
+            profile="max",
+            max_rows=10,
         )
         print("Result:")
         print(result[:1000] + "..." if len(result) > 1000 else result)
