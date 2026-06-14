@@ -10,6 +10,15 @@ The RAS Commander MCP (Model Context Protocol) server provides tools for queryin
 
 For a demonstration of CLB's H&H automation services, contact us at info@clbengineering.com
 
+## When to use the MCP vs. ras-commander directly
+
+| Need | Best fit |
+| --- | --- |
+| Richest, most capable workflow | Use a local coding agent (Claude Code or Codex) directly with the [ras-commander](https://github.com/gpt-cmdr/ras-commander) library and repository. This gives access to the full Python API surface: scripting, notebooks, batch automation, custom analysis, and geometry/results extraction beyond what any fixed tool set exposes. |
+| Simple/basic MCP queries | Use this MCP server for a deliberately limited subset of ras-commander: project info, plan results, HDF structure, and geometry element listings. It is especially useful from Claude Desktop and other MCP clients where running a full agent against the repo is not practical. |
+
+Rule of thumb: if your workflow needs custom logic, iteration, writing files, or the broader API, use ras-commander directly with a local agent.
+
 ## Features
 
 - Query comprehensive HEC-RAS project information (plans, geometries, flows, boundaries)
