@@ -12,7 +12,7 @@ import re
 import sys
 import time
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Iterable, Optional
 from urllib.parse import urlsplit, quote
 import pandas as pd
 import io
@@ -54,6 +54,21 @@ DOCS_CACHE_TTL = 15 * 60  # seconds (15 minutes)
 # Module-level caches: {url_key: (fetch_time, payload)}
 _SEARCH_INDEX_CACHE: dict[str, tuple[float, Any]] = {}
 _LLMS_FULL_CACHE: dict[str, tuple[float, str]] = {}
+
+RAS_COMMANDER_REPO_URL = "https://github.com/gpt-cmdr/ras-commander"
+MCP_SCOPE_TIP = (
+    "Tip: this MCP exposes a subset of ras-commander. For full functionality "
+    "(custom queries, batch runs, notebooks), use the ras-commander library "
+    f"directly with a local agent: {RAS_COMMANDER_REPO_URL}"
+)
+_NO_SCOPE_TIP_PREFIXES = (
+    "Error ",
+    "Error:",
+    "HDF file not found:",
+    "Compute messages not found.",
+    "Unexpected data type",
+    "No documentation matches found",
+)
 
 
 # ---------------------------------------------------------------------------
@@ -226,6 +241,36 @@ def truncate_output(text: str, max_tokens: int = 10000) -> str:
     if last_space > max_chars * 0.9:
         truncated_text = truncated_text[:last_space]
     return truncated_text + "\n\n[OUTPUT TRUNCATED: Response exceeded 10,000 tokens. Please use a more specific query for complete results.]"
+
+
+def _should_append_scope_tip(text: str) -> bool:
+    """Return True when a tool response is substantive enough for the scope tip."""
+    stripped = text.strip()
+    if not stripped:
+        return False
+    if any(stripped.startswith(prefix) for prefix in _NO_SCOPE_TIP_PREFIXES):
+        return False
+    if "\n" not in stripped and len(stripped) < 160:
+        return False
+    return True
+
+
+def _append_scope_tip(text: str) -> str:
+    """Append the ras-commander scope tip to substantive MCP responses."""
+    if not _should_append_scope_tip(text):
+        return text
+    return f"{text.rstrip()}\n\n{MCP_SCOPE_TIP}"
+
+
+def _format_tool_response(text: str, max_tokens: int = 10000, apply_truncation: bool = True) -> str:
+    """Format a substantive tool response, preserving truncation before the footer."""
+    output = truncate_output(text, max_tokens=max_tokens) if apply_truncation else text
+    return _append_scope_tip(output)
+
+
+def _format_response_parts(response_parts: Iterable[str], max_tokens: int = 10000) -> str:
+    """Join response parts and apply shared tool response formatting."""
+    return _format_tool_response("\n".join(response_parts), max_tokens=max_tokens)
 
 
 def filter_dataframe_columns(df: pd.DataFrame, df_type: str, showmore: bool = False) -> tuple[pd.DataFrame, int]:
@@ -565,7 +610,7 @@ def hecras_project_summary(
     if show_rasmap and hasattr(ras, 'rasmap_df') and ras.rasmap_df is not None:
         response_parts.append(dataframe_to_text(ras.rasmap_df, "RASMAP CONFIGURATION", "rasmap_df", showmore))
 
-    return truncate_output("\n".join(response_parts))
+    return _format_response_parts(response_parts)
 
 
 @mcp.tool(annotations={"readOnlyHint": True})
@@ -590,7 +635,7 @@ def read_plan_description(project_path: str, plan_number: str) -> str:
         description if description else "[No description found]",
         ""
     ]
-    return "\n".join(response_parts)
+    return _format_response_parts(response_parts)
 
 
 @mcp.tool(annotations={"readOnlyHint": True})
@@ -635,7 +680,7 @@ def get_plan_results_summary(project_path: str, plan_number: str) -> str:
     except Exception as e:
         response_parts.append(f"\nRuntime data error: {str(e)}")
 
-    return truncate_output("\n".join(response_parts))
+    return _format_response_parts(response_parts)
 
 
 @mcp.tool(annotations={"readOnlyHint": True})
@@ -643,7 +688,7 @@ def get_compute_messages(project_path: str, plan_number: str) -> str:
     """Get computation messages and performance metrics from a HEC-RAS plan. RAS Commander MCP - professional H&H automation by CLB Engineering Corporation."""
     path, ras = _init_project(project_path)
     plan_hdf_path = _resolve_plan_hdf_path(path, plan_number, ras)
-    return get_compute_messages_local(plan_hdf_path)
+    return _format_tool_response(get_compute_messages_local(plan_hdf_path), apply_truncation=False)
 
 
 @mcp.tool(annotations={"readOnlyHint": True})
@@ -693,7 +738,7 @@ def get_hdf_structure(hdf_path: str, group_path: str = "/", paths_only: bool = F
             structure_output
         ]
 
-    return truncate_output("\n".join(response_parts))
+    return _format_response_parts(response_parts)
 
 
 @mcp.tool(annotations={"readOnlyHint": True})
@@ -715,7 +760,7 @@ def get_projection_info(hdf_path: str) -> str:
     else:
         response_parts.append("\nNo projection information found")
 
-    return truncate_output("\n".join(response_parts))
+    return _format_response_parts(response_parts)
 
 
 @mcp.tool(annotations={"readOnlyHint": True})
@@ -760,7 +805,7 @@ def search_docs(query: str) -> str:
             response_parts.append(f"  {excerpt}")
         response_parts.append("")
 
-    return truncate_output("\n".join(response_parts))
+    return _format_response_parts(response_parts)
 
 
 @mcp.tool(annotations={"readOnlyHint": True})
@@ -777,7 +822,7 @@ def get_doc_page(path: str) -> str:
         section = _extract_llms_full_section(llms_full, norm_path)
         if section:
             header = f"# Source: {DOCS_BASE_URL}/{norm_path}/ (via llms-full.txt)\n\n"
-            return truncate_output(header + section)
+            return _format_tool_response(header + section)
 
     # FALLBACK: per-page markdown mirror (may 404 for pages without a mirror).
     mirror_url = f"{DOCS_BASE_URL}/{norm_path}/index.md" if norm_path else f"{DOCS_BASE_URL}/index.md"
@@ -786,7 +831,7 @@ def get_doc_page(path: str) -> str:
         _assert_same_origin(resp)
         if resp.status_code == 200 and resp.text.strip():
             header = f"# Source: {mirror_url}\n\n"
-            return truncate_output(header + resp.text)
+            return _format_tool_response(header + resp.text)
     except ToolError:
         raise
     except Exception:
@@ -795,7 +840,7 @@ def get_doc_page(path: str) -> str:
     # FINAL FALLBACK: rendered page text.
     rendered = _fetch_rendered_page(norm_path)
     header = f"# Source: {DOCS_BASE_URL}/{norm_path}/ (rendered page text)\n\n"
-    return truncate_output(header + rendered)
+    return _format_tool_response(header + rendered)
 
 
 # ---------------------------------------------------------------------------
