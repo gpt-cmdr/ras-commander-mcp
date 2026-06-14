@@ -15,10 +15,14 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from server import (
     hecras_project_summary,
     read_plan_description,
+    get_mesh_results,
+    get_plan_summary,
     get_plan_results_summary,
+    get_xsec_results,
     get_compute_messages,
     get_hdf_structure,
     get_projection_info,
+    list_profiles,
     mcp,
 )
 
@@ -177,6 +181,55 @@ class ToolTester:
             {
                 "project_path": str(self.project_path),
                 "plan_number": test_plan
+            }
+        )
+
+        # Test 6.1: List available result profiles/time steps
+        self.test_tool(
+            list_profiles,
+            "list_profiles",
+            f"List available result profiles/time steps for plan {test_plan}",
+            {
+                "project_path": str(self.project_path),
+                "plan_number": test_plan
+            }
+        )
+
+        # Test 6.2: Plan-level result summary metrics
+        self.test_tool(
+            get_plan_summary,
+            "get_plan_summary",
+            f"Get plan-level summary metrics for plan {test_plan}",
+            {
+                "project_path": str(self.project_path),
+                "plan_number": test_plan,
+                "max_rows": 50
+            }
+        )
+
+        # Test 6.3: 2D mesh results
+        self.test_tool(
+            get_mesh_results,
+            "get_mesh_results",
+            f"Get 2D mesh max-over-time WSEL/depth/velocity for plan {test_plan}",
+            {
+                "project_path": str(self.project_path),
+                "plan_number": test_plan,
+                "profile": "max",
+                "max_rows": 25
+            }
+        )
+
+        # Test 6.4: 1D cross-section results
+        self.test_tool(
+            get_xsec_results,
+            "get_xsec_results",
+            f"Get 1D cross-section max-over-time WSEL/flow/velocity for plan {test_plan}",
+            {
+                "project_path": str(self.project_path),
+                "plan_number": test_plan,
+                "profile": "max",
+                "max_rows": 25
             }
         )
 
