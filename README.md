@@ -1,5 +1,7 @@
 # HEC-RAS Model Context Protocol (MCP) Server
 
+> 📖 **Documentation:** [rascommander.info/mcp](https://rascommander.info/mcp/) · full library docs at [rascommander.info/ras](https://rascommander.info/ras/)
+
 <div align="center">
   <img src="ras_commander_mcp_logo.svg" alt="RAS Commander MCP Logo" width="70%">
 </div>  
