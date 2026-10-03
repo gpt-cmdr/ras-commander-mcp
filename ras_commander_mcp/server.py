@@ -1,20 +1,17 @@
 """Explicit stdio tool registration with typed, bounded outputs."""
 
-import json
 import logging
 import threading
 import time
-import urllib.error
-import urllib.request
 
 from mcp.server import MCPServer
 from mcp.server.mcpserver.exceptions import ToolError
 from mcp.types import ToolAnnotations
-from packaging.version import InvalidVersion, Version
+from packaging.version import Version
 
 from . import __version__
 from .adapter import metadata_api_present, versions
-from .worker import execute
+from .worker import check_pypi, execute
 from .contracts import Information, MetadataRequest, Request, Result
 from .policy import PolicyError, ReadPolicy
 
@@ -25,37 +22,25 @@ _update_cache: tuple[float, dict[str, str | None], str] | None = None
 
 def _updates(check: bool):
     global _update_cache
+    unavailable = {name: None for name in ("ras-commander", "ras-commander-mcp", "mcp")}
     if not check:
-        return {name: None for name in ("ras-commander", "ras-commander-mcp", "mcp")}, "not_checked"
-    with _update_lock:
-        if _update_cache and time.monotonic() - _update_cache[0] < 900:
-            return _update_cache[1:]
-        latest = {}
-        status = "checked"
-        for name in ("ras-commander", "ras-commander-mcp", "mcp"):
-            try:
-                with urllib.request.urlopen(f"https://pypi.org/pypi/{name}/json", timeout=3) as response:
-                    payload = response.read(1_048_577)
-                if len(payload) > 1_048_576:
-                    raise ValueError("PyPI response exceeds metadata limit")
-                metadata = json.loads(payload)
-                stable = []
-                for label, files in metadata.get("releases", {}).items():
-                    try:
-                        candidate = Version(label)
-                    except InvalidVersion:
-                        continue
-                    if not candidate.is_prerelease and not candidate.is_devrelease and any(
-                            not item.get("yanked", False) for item in files):
-                        stable.append((candidate, label))
-                if not stable:
-                    raise ValueError("No stable non-yanked release metadata")
-                latest[name] = max(stable)[1]
-            except (OSError, ValueError, KeyError):
-                latest[name] = None
-                status = "offline"
+        return unavailable, "not_checked"
+    cached = _update_cache
+    if cached and time.monotonic() - cached[0] < 900:
+        return cached[1:]
+    # Do not let concurrent optional checks queue behind a socket or worker.
+    # One metadata child is allowed; other callers receive offline/unknown status.
+    if not _update_lock.acquire(blocking=False):
+        return unavailable, "offline"
+    try:
+        cached = _update_cache
+        if cached and time.monotonic() - cached[0] < 900:
+            return cached[1:]
+        latest, status = check_pypi(seconds=5)
         _update_cache = (time.monotonic(), latest, status)
         return latest, status
+    finally:
+        _update_lock.release()
 
 
 def create_server(policy: ReadPolicy) -> MCPServer:
@@ -85,7 +70,7 @@ def create_server(policy: ReadPolicy) -> MCPServer:
             update_status=status, update_available=available, tools=TOOLS,
             metadata_api_available=metadata_api_present(),
             allowed_roots=[str(path) for path in policy.roots],
-            limits={"file_bytes": policy.max_file_bytes, "rows": 100, "characters": 16000, "seconds": 30, "workers": 2},
+            limits={"file_bytes": policy.max_file_bytes, "rows": 100, "characters": 16000, "seconds": 30, "workers": 2, "update_seconds": 5, "update_workers": 1},
             boundary="Read-only project/plan text, no HDF/DSS/geometry/grids, engine, mutators, "
                      "exports or arbitrary code. Source references are not followed. "
                      "Temporary immutable text snapshots may be staged outside project roots. "
