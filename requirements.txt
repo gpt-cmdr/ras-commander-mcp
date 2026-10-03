@@ -1,3 +1,2 @@
-fastmcp
-ras-commander
-pandas
+# Install the package to use the canonical dependency declarations.
+-e .

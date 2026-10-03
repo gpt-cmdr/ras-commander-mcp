@@ -1,361 +1,79 @@
-# HEC-RAS Model Context Protocol (MCP) Server
+# RAS Commander MCP
 
-> 📖 **Documentation:** [rascommander.info/mcp](https://rascommander.info/mcp/) · full library docs at [rascommander.info/ras](https://rascommander.info/ras/)
+RAS Commander MCP provides bounded, read-only information from HEC-RAS project
+and plan text through the public RAS Commander Python API. It requires no HEC-RAS
+executable. The fuller modeling, analysis and GIS experience uses RAS Commander
+and its Python workflows outside MCP.
 
-<div align="center">
-  <img src="ras_commander_mcp_logo.svg" alt="RAS Commander MCP Logo" width="70%">
-</div>  
+This independent open-source project complements HEC's work. It is not affiliated
+with or endorsed by USACE HEC. Official HEC references remain passive reader links.
 
-The RAS Commander MCP (Model Context Protocol) server provides tools for querying HEC-RAS project information using the ras-commander library. This allows Claude Desktop to interact with HEC-RAS hydraulic modeling projects.
+## Scope
 
-**RAS Commander MCP** is an open-source, LLM-forward H&H automation tool provided under MIT license by [CLB Engineering Corporation](https://clbengineering.com/). This is third-party software and is not made by or endorsed by the U.S. Army Corps of Engineers (USACE) Hydrologic Engineering Center (HEC).
+The explicit tool set covers server/version information, project length units,
+plan descriptions, and selected project/plan metadata. Project metadata and plan
+configuration require the new upstream `RasText` API; on ras-commander 0.103.0,
+units and descriptions work and metadata tools return an actionable availability
+error. See [release sequencing](docs/compatibility.md).
 
-For a demonstration of CLB's H&H automation services, contact us at info@clbengineering.com
+Project tools belong only in bounded informational subagents. Each delegation
+specifies the question, configured root, named file, selected fields, row and
+character limits, and answer format. The child returns a compact answer with source
+identity, installed versions, missing data and truncation. A host without subagent
+tool isolation should use a scoped Python workflow instead of exposing project
+tools to its main coordinator.
 
-## When to use the MCP vs. ras-commander directly
+MCP does not modify projects, compute, read HDF/DSS, inspect geometry/coordinates,
+extract gridded data, export files, download into projects, or execute arbitrary
+code. Large and repeated drilldowns use Python. Tool annotations describe this
+boundary; descriptor checks, allowlists and bounded snapshots enforce the reads.
 
-| Need | Best fit |
-| --- | --- |
-| Richest, most capable workflow | Use a local coding agent (Claude Code or Codex) directly with the [ras-commander](https://github.com/gpt-cmdr/ras-commander) library and repository. This gives access to the full Python API surface: scripting, notebooks, batch automation, custom analysis, and geometry/results extraction beyond what any fixed tool set exposes. |
-| Simple/basic MCP queries | Use this MCP server for a deliberately limited subset of ras-commander: project info, plan results, HDF structure, and geometry element listings. It is especially useful from Claude Desktop and other MCP clients where running a full agent against the repo is not practical. |
+## Install and configure
 
-Rule of thumb: if your workflow needs custom logic, iteration, writing files, or the broader API, use ras-commander directly with a local agent.
+Use Python 3.10+ and an authorized managed environment:
 
-## Features
-
-- Query comprehensive HEC-RAS project information (plans, geometries, flows, boundaries)
-- List HEC-RAS geometry elements including 1D rivers/reaches, cross sections, 2D reference lines, boundary lines, breaklines, structures, and mesh areas
-- Extract detailed plan results including unsteady simulation info and runtime metrics
-- Query computed plan results directly, including profile lists, plan summary metrics, 2D mesh cells, and 1D cross sections
-- Explore HDF file structures and extract computation messages
-- Support for multiple HEC-RAS versions (6.5, 6.6, etc.)
-- Formatted text output suitable for LLM interaction
-- Error handling with helpful diagnostics
-
-## Future Features
-
-- Summary Results at Boundaries (Max WSE and Max Flow)
-- Also Structures (list them all with max wse and max flow)
-- Detailed XSEC results table (by river/reach) for debugging
-
-- HEC-RAS Documentation Search Capability (return relevant confluence document links via RAG or deep research)
-
-
-## Prerequisites
-
-1. **HEC-RAS Installation**: HEC-RAS must be installed on your system (default expects version 6.6)
-2. **Python**: Python 3.10+
-3. **Claude Desktop**: For MCP integration
-4. **uv**: Python package manager (recommended)
-
-## Installation
-
-This MCP server uses the "uv" library to handle python virtual environments.  Once this is installed, the Claude Desktop configuration will handle the package installation and running the MCP server locally whenever Claude Desktop (or Claude Code) are started.  
-
-
-### Using uv (Recommended)
-
-1. Install uv if you haven't already:
-```bash
-# Windows (PowerShell)
-powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
-
-# macOS/Linux
-curl -LsSf https://astral.sh/uv/install.sh | sh
+```sh
+python -m pip install --upgrade ras-commander-mcp
 ```
 
-2. Clone this repository:
-```bash
-git clone <repository-url>
-cd ras-commander-mcp
+Set `RAS_MCP_ALLOWED_ROOTS` to a JSON array of absolute, resolved project roots.
+No roots are trusted by default. On Linux/macOS:
+
+```sh
+export RAS_MCP_ALLOWED_ROOTS='["/home/user/projects/example"]'
+ras-commander-mcp
 ```
 
-3. The dependencies will be automatically installed when you run the server with uvx (see Configuration below).
+On PowerShell:
 
-## Configuration
-
-### Claude Desktop Integration via uvx/pip package (Default, Recommended)
-
-Add the following to your Claude Desktop configuration file (`claude_desktop_config.json`):
-
-```json
-{
-  "mcpServers": {
-    "hecras": {
-      "command": "uvx",
-      "args": ["ras-commander-mcp"],
-      "env": {
-        "HECRAS_VERSION": "6.6"
-      }
-    }
-  }
-}
-```
-This will install the pip package and set up a virtual environment through uvx to run the MCP server. 
-
-#### Alternate Install 1: From Git Repository (For latest and greatest version)
-```json
-{
-  "mcpServers": {
-    "hecras": {
-      "command": "uvx",
-      "args": [
-        "--from", "ras-commander-mcp@git+https://github.com/gpt-cmdr/ras-commander-mcp.git",
-        "ras-commander-mcp"
-      ],
-      "env": {
-        "HECRAS_VERSION": "6.6"
-      }
-    }
-  }
-}
+```powershell
+$env:RAS_MCP_ALLOWED_ROOTS = '["C:\\Projects\\Example"]'
+ras-commander-mcp
 ```
 
-#### Alternate Install 2: Local Development Installation
-If you've cloned the repository locally for development:
+The server uses stdio. Configure the executable and environment in a client that
+routes project tools to subagents. `claude_desktop_config.json` illustrates transport
+configuration, not proof that desktop clients provide this routing. No project
+query performs package installation or an automatic upgrade.
 
-```json
-{
-  "mcpServers": {
-    "hecras": {
-      "command": "uv",
-      "args": ["run", "--directory", "C:\\path\\to\\ras-commander-mcp-main", "ras-commander-mcp"],
-      "env": {
-        "HECRAS_VERSION": "6.6"
-      }
-    }
-  }
-}
-```
+## Dependencies and updates
 
+Direct dependencies are the official MCP Python SDK (without CLI extras),
+ras-commander and packaging. The SDK has protocol/validation/network dependencies;
+ras-commander currently inherits numpy, pandas and h5py. This is a small adapter,
+not a stdlib-only installation. No GIS, Java/DSS or remote-engine extras are added.
 
+`server_information(check_updates=true)` optionally checks fixed PyPI metadata
+endpoints with bounded responses and caching. It reports installed/latest versions
+and update availability; offline use remains available. Preserve deliberate user
+pins and refresh managed environments outside tool calls.
 
-### MCP Settings Configuration
+## Documentation
 
-In future versions, the MCP server will be able to execute HEC-RAS runs, so the MCP server has settings for the HEC-RAS path, and uses values for HEC-RAS version 6.6 by default.  These settings are not yet useful, but will become useful in future versions.  To use a different version:
+- [Tools](docs/tools.md)
+- [Architecture and access limits](docs/architecture.md)
+- [Migration from the previous tool set](docs/migration.md)
+- [Compatibility and release maintenance](docs/compatibility.md)
+- [Installation](docs/installation.md)
 
-1. **Set HEC-RAS Version** (if you have a different version installed):
-   ```json
-   {
-     "mcpServers": {
-       "hecras": {
-         "command": "uvx",
-         "args": [
-           "--from", "ras-commander-mcp@git+https://github.com/gpt-cmdr/ras-commander-mcp.git",
-           "ras-commander-mcp"
-         ],
-         "env": {
-           "HECRAS_VERSION": "6.5"
-         }
-       }
-     }
-   }
-   ```
-
-2. **Set HEC-RAS Path** (if HEC-RAS is installed in a non-standard location):
-   ```json
-   {
-     "mcpServers": {
-       "hecras": {
-         "command": "uvx",
-         "args": [
-           "--from", "ras-commander-mcp@git+https://github.com/gpt-cmdr/ras-commander-mcp.git",
-           "ras-commander-mcp"
-         ],
-         "env": {
-           "HECRAS_PATH": "C:\\Program Files\\HEC\\HEC-RAS\\6.5\\HEC-RAS.exe"
-         }
-       }
-     }
-   }
-   ```
-
-### Testing Configuration
-
-Before adding to Claude Desktop, test your configuration:
-
-```bash
-# For local development:
-cd path/to/ras-commander-mcp-main
-set HECRAS_VERSION=6.6
-uv run ras-commander-mcp
-
-# Should start successfully showing:
-# Starting HEC-RAS MCP Server...
-# RAS Commander MCP by CLB Engineering Corporation
-```
-
-## Usage
-
-### Available Tools
-
-All tools provided by this MCP server leverage the [ras-commander](https://github.com/gpt-cmdr/ras-commander) Python library for advanced HEC-RAS automation capabilities.
-
-1. **hecras_project_summary**: Get comprehensive or selective project information
-   - Parameters:
-     - `project_path` (required): Full path to HEC-RAS project folder
-     - `show_rasprj` (optional): Show project file contents (default: true)
-     - `show_plan_df` (optional): Show plan files and metadata (default: true)
-     - `show_geom_df` (optional): Show geometry files (default: true)
-     - `show_flow_df` (optional): Show steady flow data (default: true)
-     - `show_unsteady_df` (optional): Show unsteady flow data (default: true)
-     - `show_boundaries` (optional): Show boundary conditions (default: true)
-     - `show_rasmap` (optional): Show RASMapper configuration (default: false)
-     - `showmore` (optional): Show all columns/verbose mode (default: false)
-
-2. **read_plan_description**: Read multi-line description from a plan file
-   - Parameters:
-     - `project_path` (required): Full path to HEC-RAS project folder
-     - `plan_number` (required): Plan number (e.g., '1', '01', '02')
-
-3. **get_plan_results_summary**: Get comprehensive results from a specific plan
-   - Parameters:
-     - `project_path` (required): Full path to HEC-RAS project folder
-     - `plan_number` (required): Plan number or full path to plan HDF file
-
-4. **list_profiles**: List available steady profiles or unsteady output time steps for a computed plan
-   - Parameters:
-     - `project_path` (required): Full path to HEC-RAS project folder
-     - `plan_number` (required): Plan number or full path to plan HDF file
-
-5. **get_plan_summary**: Get plan-level result statistics, including max WSEL, peak flow, volume accounting, and runtime timing
-   - Parameters:
-     - `project_path` (required): Full path to HEC-RAS project folder
-     - `plan_number` (required): Plan number or full path to plan HDF file
-     - `max_rows` (optional): Maximum rows to show in each table (default: 100)
-
-6. **get_mesh_results**: Get 2D mesh cell results for a plan profile/time step or maximum-over-time profile
-   - Parameters:
-     - `project_path` (required): Full path to HEC-RAS project folder
-     - `plan_number` (required): Plan number or full path to plan HDF file
-     - `profile` (optional): Output index, datetime from `list_profiles`, or `max` (default: "max")
-     - `mesh_name` (optional): 2D flow area name, or blank for all meshes
-     - `variables` (optional): Comma-separated variables such as `Water Surface,Depth,Velocity`
-     - `max_rows` (optional): Maximum rows to show per mesh (default: 100)
-
-7. **get_xsec_results**: Get 1D cross-section WSEL, flow, and velocity results for a plan profile/time step
-   - Parameters:
-     - `project_path` (required): Full path to HEC-RAS project folder
-     - `plan_number` (required): Plan number or full path to plan HDF file
-     - `profile` (optional): Output index, datetime/profile name from `list_profiles`, or `max` (default: "max")
-     - `variables` (optional): Comma-separated variables such as `Water_Surface,Flow,Velocity_Total`
-     - `max_rows` (optional): Maximum rows to show (default: 100)
-
-8. **get_compute_messages**: Get computation messages and performance metrics
-   - Parameters:
-     - `project_path` (required): Full path to HEC-RAS project folder
-     - `plan_number` (required): Plan number or full path to plan HDF file
-
-9. **get_hdf_structure**: Explore HDF file structure
-   - Parameters:
-     - `hdf_path` (required): Full path to the HDF file
-     - `group_path` (optional): Internal HDF path to start exploration from (default: "/")
-     - `paths_only` (optional): Show only paths without details (default: false)
-
-10. **get_projection_info**: Get spatial projection information (WKT)
-   - Parameters:
-     - `hdf_path` (required): Full path to the HDF file
-
-11. **search_docs**: Search the ras-commander documentation and return the top matching pages with excerpts (read-only docs retrieval; requires network)
-   - Parameters:
-     - `query` (required): Search terms (e.g., "cross section results")
-
-12. **get_doc_page**: Retrieve the markdown/text content of a documentation page by path (read-only docs retrieval; requires network)
-   - Parameters:
-     - `path` (required): Page path, e.g. `reference/dataframe-reference` (leading/trailing slashes optional)
-
-13. **list_geometry_elements**: List major geometry elements from geometry HDF files
-   - Geometry types:
-     - `rivers_reaches`: 1D river and reach alignment lines
-     - `cross_sections`: 1D cross-section cut lines by river, reach, and station
-     - `reference_lines`: 2D profile-output reference lines, optionally filtered by mesh area
-     - `bc_lines`: 2D flow area boundary condition lines
-     - `breaklines`: 2D mesh enforcement lines
-     - `structures`: bridges, culverts, inline structures, and lateral structures
-     - `mesh_areas`: named 2D flow areas
-   - Parameters:
-     - `project_path` (required): Full path to HEC-RAS project folder
-     - `geometry_number` (optional): Geometry number such as `1`, `01`, or `g01`; full geometry HDF paths are also accepted. Defaults to all geometry HDF files found in the project.
-     - `element_type` (optional): One of the geometry types above, common aliases such as `xs` or `boundary_lines`, or `all` (default)
-     - `mesh_name` (optional): Filter 2D reference lines to a specific mesh area
-     - `showmore` (optional): Show more attributes while still omitting raw geometry/detail columns (default: false)
-
-> **Docs tools (`search_docs`, `get_doc_page`)** are read-only documentation retrieval and stay
-> within the MCP's stated scope (introspection / QAQC / review — never HEC-RAS execution). They
-> live-fetch from the docs site and therefore **require network access**. The base URL defaults to
-> `https://rascommander.info` and is overridable via the `RASCOMMANDER_DOCS_URL` environment variable.
-
-### Example Usage in Claude
-
-Once configured, you can ask Claude:
-
-- "Query the HEC-RAS project at C:/Projects/MyRiverModel"
-- "Show me the plans in the Muncie test project"
-- "Get the results summary for plan '01' in my project"
-- "List the output profiles for plan '01'"
-- "Show max 2D mesh WSEL, depth, and velocity for plan '01'"
-- "Get cross-section WSEL and peak flow results for plan '01'"
-- "Show me the compute messages for plan '1'"
-- "Explore the HDF structure of my results file"
-- "Get the projection info from my terrain HDF"
-- "List all geometry elements for the model"
-- "List cross sections for geometry g01"
-- "Show 2D boundary lines and mesh areas"
-- "Search the ras-commander docs for cross section results"
-- "Show me the dataframe-reference documentation page"
-
-## Python Library Reference
-
-This MCP server is built on top of the [ras-commander](https://github.com/gpt-cmdr/ras-commander) Python library, which provides comprehensive programmatic access to HEC-RAS projects. For advanced Python scripting and automation beyond what's available through the MCP interface, refer to the ras-commander documentation.
-
-## Testing
-
-### Running Tests
-
-From the project directory, run the complete test suite:
-
-```bash
-# Install dependencies and run all tests
-uv sync
-uv run python tests/test_server.py          # Basic server functionality
-uv run python tests/test_all_tools.py       # Comprehensive tool validation  
-uv run python tests/test_single_tool.py     # Single tool testing utility
-```
-
-Test outputs are saved to `tests/outputs/` as markdown files for review.
-
-### Test Data
-
-The `testdata/` folder contains complete HEC-RAS projects for testing:
-- `Muncie/`: Complete project with terrain, results, and boundary conditions
-- `BeaverLake/`: Additional test project
-
-## Troubleshooting
-
-1. **ImportError for ras-commander**: Ensure HEC-RAS is properly installed
-2. **Project not found**: Verify the project path exists and contains .prj files
-3. **Version errors**: Check that the specified HEC-RAS version matches your installation
-4. **MCP connection issues**: Verify Claude Desktop configuration and restart Claude
-
-## Development
-
-To modify or extend the server:
-
-1. Clone the repository
-2. Make changes to `server.py`
-3. Test with: `uv run python tests/test_all_tools.py`
-4. Update Claude Desktop configuration if needed
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## Trademarks
-
-See [TRADEMARKS.md](TRADEMARKS.md) for trademark information and compliance policies.
-
-## About
-
-**RAS Commander MCP** is developed and maintained by [CLB Engineering Corporation](https://clbengineering.com/) as part of our commitment to advancing H&H automation through open-source tools.
-
-For professional H&H automation services and custom solutions, contact us at info@clbengineering.com
+The full library documentation is at [RAS Commander](https://rascommander.info/ras/).

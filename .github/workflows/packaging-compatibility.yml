@@ -1,0 +1,37 @@
+name: Package minimum and current compatible libraries
+on:
+  pull_request:
+  push:
+    branches: [main, automation/pypi-compatibility]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  package:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        dependencies: [minimum, current-compatible]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: python -m pip install build
+      - run: python -m build
+      - run: python scripts/verify_distribution.py
+      - name: Install minimum contracts
+        if: matrix.dependencies == 'minimum'
+        run: python -m pip install "mcp==2.3.0" "ras-commander==0.103.0"
+      - name: Install built wheel and current compatible contracts
+        shell: bash
+        run: python -m pip install dist/*.whl
+      - run: python -m pip check
+      - name: Record resolved versions (not functional qualification)
+        run: python -m pip freeze
+      - uses: actions/upload-artifact@v4
+        with:
+          name: distributions-${{ matrix.os }}-${{ matrix.dependencies }}
+          path: dist/
