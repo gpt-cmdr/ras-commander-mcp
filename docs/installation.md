@@ -1,8 +1,10 @@
 # Installation
 
-Install `ras-commander-mcp` with Python 3.10+ in an authorized environment. Use
-`python -m pip install --upgrade ras-commander-mcp` for a managed current install;
-retain an existing lock or pin when reproducibility requires it.
+Use Python 3.10+ in an authorized environment. This 0.4 redesign is an unpublished
+candidate; PyPI currently provides 0.3.2 with the previous tool set. Install the
+candidate from its checkout with `python -m pip install .`. After 0.4 is published
+and qualified, use `python -m pip install --upgrade ras-commander-mcp` for a managed
+current install; retain an existing lock or pin when reproducibility requires it.
 
 Set `RAS_MCP_ALLOWED_ROOTS` to a nonempty JSON array of resolved absolute project
 roots, then run `ras-commander-mcp` or `python -m ras_commander_mcp`. Missing root

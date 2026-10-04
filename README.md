@@ -30,11 +30,17 @@ boundary; descriptor checks, allowlists and bounded snapshots enforce the reads.
 
 ## Install and configure
 
-Use Python 3.10+ and an authorized managed environment:
+Use Python 3.10+ and an authorized managed environment. This 0.4 redesign is an
+unpublished candidate; the current PyPI package is 0.3.2 and has the previous tool
+set. To review this candidate, install from its checkout:
 
 ```sh
-python -m pip install --upgrade ras-commander-mcp
+python -m pip install .
 ```
+
+After 0.4 is published and qualified, a managed current install can use
+`python -m pip install --upgrade ras-commander-mcp`. Preserve an existing pin or
+lock when required.
 
 Set `RAS_MCP_ALLOWED_ROOTS` to a JSON array of absolute, resolved project roots.
 No roots are trusted by default. On Linux/macOS:
