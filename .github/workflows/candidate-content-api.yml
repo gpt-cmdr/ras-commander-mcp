@@ -27,7 +27,9 @@ jobs:
       - name: Install exact merged upstream content API candidate
         # Separate from the released PyPI minimum/current compatibility matrix.
         # A source commit is qualification evidence, not a published-support claim.
-        run: python -m pip install --no-deps "ras-commander @ git+https://github.com/gpt-cmdr/ras-commander.git@80f1c22822694194c1a51016ee40dd42a1b2d789"
+        run: python -m pip install --force-reinstall --no-deps "ras-commander @ git+https://github.com/gpt-cmdr/ras-commander.git@80f1c22822694194c1a51016ee40dd42a1b2d789"
+      - name: Require candidate public API before qualification
+        run: python -c "from ras_commander import RasText; assert RasText is not None"
       - name: Qualify public synthetic and maintained SDK contracts
         timeout-minutes: 10
         run: python scripts/run_installed_contracts.py
