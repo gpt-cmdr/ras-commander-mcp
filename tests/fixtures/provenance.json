@@ -1,0 +1,14 @@
+[
+  {
+    "file": "hec_ras_66_template.prj",
+    "source": "https://github.com/gpt-cmdr/ras-commander/blob/main/examples/data/RAS_6.6_Template/TEMPLATE.prj",
+    "sha256": "a35b9d4b87068b0df1f489d64a6bf227fee0851a0159cf20479ec8389013b21e",
+    "nature": "unchanged repository project text template"
+  },
+  {
+    "file": "hec_ras_70_template.prj",
+    "source": "https://github.com/gpt-cmdr/ras-commander/blob/main/examples/data/RAS_7.0_TEMPLATE/RASTEMPLATE.prj",
+    "sha256": "d9ec9a1431673b0853c9f3dbb5927136b22ffde325487dc11467d6f88bb1ca4c",
+    "nature": "unchanged repository project text template"
+  }
+]

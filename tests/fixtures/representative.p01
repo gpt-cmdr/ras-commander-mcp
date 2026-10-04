@@ -1,0 +1,11 @@
+Plan Title=Text contract scenario
+Short Identifier=BASE
+Program Version=7.0
+Geom File=g01
+Flow File=u01
+Simulation Date=01JAN2026,0000,02JAN2026,0000
+Computation Interval=5SEC
+UNET D1 Cores=4
+BEGIN DESCRIPTION:
+Representative syntax fixture, not a computed model.
+END DESCRIPTION:

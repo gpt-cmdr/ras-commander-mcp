@@ -1,0 +1,49 @@
+name: Propose PyPI compatibility refresh
+on:
+  workflow_dispatch:
+  repository_dispatch:
+    types: [ras-commander-release]
+  schedule:
+    - cron: '23 8 * * 1'
+permissions:
+  contents: write
+  pull-requests: write
+concurrency:
+  group: compatibility-update
+  cancel-in-progress: false
+jobs:
+  propose:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: python -m pip install "packaging>=24"
+      - name: Refresh bounded public package metadata
+        run: python scripts/refresh_compatibility.py
+      - name: Open or update a reviewable PR
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          if git diff --quiet -- compatibility/pypi-snapshot.json; then
+            exit 0
+          fi
+          git checkout -B automation/pypi-compatibility
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add compatibility/pypi-snapshot.json
+          git commit -m 'Record current stable PyPI package contracts'
+          if git ls-remote --exit-code --heads origin automation/pypi-compatibility >/dev/null 2>&1; then
+            git fetch origin automation/pypi-compatibility:refs/remotes/origin/automation/pypi-compatibility
+          fi
+          git push --force-with-lease origin automation/pypi-compatibility
+          cat > "$RUNNER_TEMP/compatibility-pr.md" <<'BODY'
+          Refresh stable PyPI metadata for RAS Commander MCP.
+
+          Review upstream API changes, dependency bounds, artifact provenance and minimum/latest contract-check results. A newer snapshot does not establish compatibility or authorize an environment upgrade. Windows descriptor behavior requires native evidence. No package publication or project mutation is performed.
+          BODY
+          if ! gh pr view automation/pypi-compatibility --json number >/dev/null 2>&1; then
+            gh pr create --draft --head automation/pypi-compatibility --title 'Review current stable PyPI compatibility' --body-file "$RUNNER_TEMP/compatibility-pr.md"
+          fi

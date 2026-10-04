@@ -1,13 +1,10 @@
 {
   "mcpServers": {
-    "hecras": {
+    "ras-commander-information": {
       "command": "uvx",
-      "args": [
-        "--from", "ras-commander-mcp@git+https://github.com/gpt-cmdr/ras-commander-mcp.git",
-        "ras-commander-mcp"
-      ],
+      "args": ["--from", "ras-commander-mcp", "ras-commander-mcp"],
       "env": {
-        "HECRAS_VERSION": "6.6"
+        "RAS_MCP_ALLOWED_ROOTS": "[\"C:\\Projects\\Example\"]"
       }
     }
   }
