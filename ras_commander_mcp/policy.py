@@ -9,6 +9,16 @@ import re
 import stat
 
 
+def _extended_path(path: Path) -> str:
+    """Return the Windows extended-length form so reads work beyond MAX_PATH."""
+    text = str(path)
+    if text.startswith("\\\\?\\"):
+        return text
+    if text.startswith("\\\\"):
+        return "\\\\?\\UNC\\" + text[2:]
+    return "\\\\?\\" + text
+
+
 class PolicyError(ValueError):
     """A scoped read was denied."""
 
@@ -107,8 +117,9 @@ class ReadPolicy:
             import ctypes
             from ctypes import wintypes
             import msvcrt
-            path = root.joinpath(*parts)
-            fd = os.open(path, os.O_RDONLY | os.O_BINARY)
+            # Components are validated above, so the extended-length form
+            # (which skips normalization) cannot introduce traversal.
+            fd = os.open(_extended_path(root.joinpath(*parts)), os.O_RDONLY | os.O_BINARY)
             try:
                 get_name = ctypes.WinDLL("kernel32", use_last_error=True).GetFinalPathNameByHandleW
                 get_name.argtypes = [wintypes.HANDLE, wintypes.LPWSTR, wintypes.DWORD, wintypes.DWORD]
