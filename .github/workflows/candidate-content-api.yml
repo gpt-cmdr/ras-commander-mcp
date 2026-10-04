@@ -1,0 +1,37 @@
+name: Candidate content API qualification
+on:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  candidate:
+    name: content-api (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    env:
+      CI: '1'
+      PYTHONUNBUFFERED: '1'
+      PYTHONFAULTHANDLER: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install MCP candidate and declared test dependencies
+        run: python -m pip install ".[dev]"
+      - name: Install exact merged upstream content API candidate
+        # Separate from the released PyPI minimum/current compatibility matrix.
+        # A source commit is qualification evidence, not a published-support claim.
+        run: python -m pip install --no-deps "ras-commander @ git+https://github.com/gpt-cmdr/ras-commander.git@80f1c22822694194c1a51016ee40dd42a1b2d789"
+      - name: Qualify public synthetic and maintained SDK contracts
+        timeout-minutes: 10
+        run: python scripts/run_installed_contracts.py
+      - name: Record exact dependency and source identities
+        run: |
+          python -m pip check
+          python -m pip freeze
