@@ -59,3 +59,23 @@ def test_randomized_stdio_requests_are_isolated_and_recoverable(tmp_path,mode):
           assert response.structured_content['missing_fields']==['Unsteady File']
     asyncio.run(run())
     assert {p.name:hashlib.sha256(p.read_bytes()).hexdigest() for p in project.iterdir()}==before
+
+
+@pytest.mark.parametrize('encoding',['latin-1','utf-8-sig'])
+def test_path_apis_preserve_narrative_encoding_and_original_source_hash(tmp_path,encoding):
+    from ras_commander_mcp.adapter import RasAdapter
+    from ras_commander_mcp.contracts import Request
+    from ras_commander_mcp.policy import ReadPolicy
+    narrative='Résumé – model' if encoding=='utf-8-sig' else 'Résumé model'
+    blob=('Plan Title=Encoding\nBEGIN DESCRIPTION:\n'+narrative+'\nEND DESCRIPTION:\n').encode(encoding)
+    (tmp_path/'encoding.p01').write_bytes(blob)
+    project_blob='SI Units\nProj Title=Metric\n'.encode(encoding)
+    (tmp_path/'encoding.prj').write_bytes(project_blob)
+    adapter=RasAdapter(ReadPolicy((tmp_path,)))
+    description=adapter.plan_description(Request(root=str(tmp_path),file='encoding.p01'))
+    assert description.records[0].value==narrative
+    assert description.source.encoding==encoding
+    assert description.source.sha256==hashlib.sha256(blob).hexdigest()
+    assert description.warnings and 'source bytes are unchanged' in description.warnings[0].lower()
+    units=adapter.project_units(Request(root=str(tmp_path),file='encoding.prj'))
+    assert units.units=='m' and units.source.sha256==hashlib.sha256(project_blob).hexdigest()

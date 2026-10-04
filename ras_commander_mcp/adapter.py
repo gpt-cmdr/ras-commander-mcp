@@ -39,6 +39,23 @@ def _source(snapshot: Snapshot, encoding: str | None = None):
                   size_bytes=len(snapshot.data), sha256=snapshot.digest, encoding=encoding)
 
 
+def _legacy_text(snapshot: Snapshot):
+    """Stage reversible Unicode for path APIs that otherwise replace invalid UTF-8.
+
+    This is byte decoding, not domain parsing. Source hashes always describe the
+    original snapshot; the public library still reads and interprets the text.
+    """
+    try:
+        text, encoding = snapshot.data.decode("utf-8-sig"), "utf-8-sig"
+        warnings = (("UTF-8 byte-order mark removed only from the immutable parser view; source bytes are unchanged.",)
+                    if snapshot.data.startswith(b"\xef\xbb\xbf") else ())
+    except UnicodeDecodeError:
+        text, encoding = snapshot.data.decode("latin-1"), "latin-1"
+        warnings = ("Source decoded reversibly as Latin-1 and staged as UTF-8 only in the immutable parser view; "
+                    "source bytes are unchanged. Verify the producer's encoding when using non-ASCII text.",)
+    return text.encode("utf-8"), encoding, warnings
+
+
 def bounded_result(snapshot: Snapshot, fields: dict[str, list[str]], request: Request,
                    *, encoding=None, missing=(), offset=0, limit=100, warnings=(), units=None):
     """Keep a schema-valid JSON envelope within the requested character budget."""
@@ -98,33 +115,37 @@ class RasAdapter:
 
     def project_units(self, request: Request) -> Result:
         snapshot = self.policy.read(request.root, request.file, "project")
+        content, encoding, warnings = _legacy_text(snapshot)
         # Current release API opens a path. Stage an immutable bounded snapshot
         # in disposable private scratch, never in the user's project.
         from ras_commander import RasPrj
         with TemporaryDirectory(prefix="ras-mcp-text-") as directory:
             path = Path(directory) / "snapshot.prj"
-            path.write_bytes(snapshot.data)
+            path.write_bytes(content)
             path.chmod(0o400)
             try:
                 units = RasPrj.get_project_units(path)
             finally:
                 path.chmod(0o600)
         return bounded_result(snapshot, {"length_units": [] if units is None else [units]}, request,
-                              units=units, missing=() if units else ("length_units",))
+                              units=units, missing=() if units else ("length_units",),
+                              encoding=encoding, warnings=warnings)
 
     def plan_description(self, request: Request) -> Result:
         snapshot = self.policy.read(request.root, request.file, "plan")
+        content, encoding, warnings = _legacy_text(snapshot)
         from ras_commander import RasPlan
         with TemporaryDirectory(prefix="ras-mcp-text-") as directory:
             path = Path(directory) / "snapshot.p01"
-            path.write_bytes(snapshot.data)
+            path.write_bytes(content)
             path.chmod(0o400)
             try:
                 description = RasPlan.read_plan_description(path)
             finally:
                 path.chmod(0o600)
         return bounded_result(snapshot, {"Description": [description] if description else []}, request,
-                              missing=() if description else ("Description",))
+                              missing=() if description else ("Description",),
+                              encoding=encoding, warnings=warnings)
 
     def metadata(self, request: MetadataRequest, kind: str) -> Result:
         api = metadata_api()
