@@ -46,11 +46,17 @@ def test_stdio_roundtrip_and_read_only_audit(project, tmp_path, mode):
     startup = '''import sys, os, json
 root=os.environ.get("RAS_MCP_AUDIT_ROOT", "")
 log=os.environ.get("RAS_MCP_AUDIT_LOG", "")
+B=chr(92)
+def plain(path):
+    # Compare Windows extended-length paths in their ordinary form.
+    if path.startswith(B*2+"?"+B+"UNC"+B): return B*2+path[8:]
+    if path.startswith(B*2+"?"+B): return path[4:]
+    return path
 def audit(event,args):
     if event not in {"open", "os.mkdir", "os.remove", "os.rmdir", "os.rename"}: return
     target=args[0] if args else None
     if not isinstance(target,(str,bytes)): return
-    path=os.path.abspath(os.fsdecode(target))
+    path=os.path.abspath(plain(os.fsdecode(target)))
     if path != root and not path.startswith(root+os.sep): return
     if event == "open":
         mode=args[1]; flags=args[2]
@@ -63,7 +69,7 @@ def audit(event,args):
 sys.addaudithook(audit)
 real_open=os.open
 def descriptor_open(path, flags, mode=0o777, *, dir_fd=None):
-    resolved=os.fsdecode(path)
+    resolved=plain(os.fsdecode(path))
     if not os.path.isabs(resolved) and dir_fd is not None and os.name == "posix":
         resolved=os.path.join(os.readlink("/proc/self/fd/"+str(dir_fd)),resolved)
     absolute=os.path.abspath(resolved)

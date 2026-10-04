@@ -94,3 +94,20 @@ def test_configured_root_ancestor_symlink_swap_rejected(tmp_path):
     original.symlink_to(tmp_path / "moved", target_is_directory=True)
     with pytest.raises(OSError):
         policy.read(str(root), "a.prj", "project")
+
+
+@pytest.mark.skipif(os.name != "nt", reason="Windows MAX_PATH behavior")
+def test_windows_reads_beyond_max_path(tmp_path):
+    from ras_commander_mcp.policy import _extended_path
+    root = tmp_path.resolve()
+    parts = [f"Deeply Nested Consultant Folder {i:02d}" for i in range(8)] + ["Model.p01"]
+    target = root.joinpath(*parts)
+    assert len(str(target)) > 260
+    os.makedirs(_extended_path(target.parent))
+    blob = b"Plan Title=Long path\n"
+    with open(_extended_path(target), "wb") as stream:
+        stream.write(blob)
+    snapshot = ReadPolicy((root,)).read(str(root), "\\".join(parts), "plan")
+    assert snapshot.data == blob
+    with pytest.raises(PolicyError):
+        ReadPolicy((root,)).read(str(root), "\\".join(parts[:-1] + ["..", "..", "Model.p01"]), "plan")
