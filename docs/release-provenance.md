@@ -36,3 +36,12 @@ Primary protocol/API references:
 
 The SDK implements protocol revision handling. This package does not hardcode an
 initialize handshake or claim support for every older client without qualification.
+
+## Candidate qualification
+
+The October4 Linux qualification exercised published RAS Commander0.103.0 and
+separately the local source candidate containing RasText. Wheel/sdist metadata and
+the corrected installed entry point passed; SDK auto and legacy stdio sessions
+passed. See [compatibility evidence](compatibility.md) for exact suites and limits.
+Historical wheel0.3.2 was not run. Native Windows behavior is not established by
+these Linux results.

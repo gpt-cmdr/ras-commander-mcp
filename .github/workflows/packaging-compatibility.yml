@@ -28,10 +28,15 @@ jobs:
       - name: Install built wheel and current compatible contracts
         shell: bash
         run: python -m pip install dist/*.whl
+      - run: python -m pip install pytest
+      - name: Qualify released read-only text and protocol contracts
+        run: python scripts/run_installed_contracts.py
       - run: python -m pip check
-      - name: Record resolved versions (not functional qualification)
+      - name: Record exact resolved versions
         run: python -m pip freeze
       - uses: actions/upload-artifact@v4
         with:
           name: distributions-${{ matrix.os }}-${{ matrix.dependencies }}
-          path: dist/
+          path: |
+            dist/
+            contract-results.xml

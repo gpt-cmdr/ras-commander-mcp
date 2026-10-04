@@ -7,3 +7,5 @@ dist/
 *.egg-info/
 .pytest_cache/
 .claude/settings.local.json
+
+contract-results.xml

@@ -35,8 +35,9 @@ update branch or use an approved GitHub App identity. This is an enablement step
 not evidence that bot PRs received compatibility checks. Actions versions follow the current repository baseline; review supply
 chain pins under the organization's policy before enabling workflows.
 
-Minimum/current-stable contract checks should exercise actual units/descriptions,
-upstream availability, bounded structured outputs and prohibited-file rejection.
+Minimum/current-compatible contract checks exercise actual units/descriptions,
+upstream availability, bounded structured outputs, prohibited-file rejection,
+killable workers and SDK auto/legacy stdio sessions.
 A newer major SDK must receive migration review rather than an automatic relaxed
 range. Existing pins remain valid user choices. A fresh authorized managed install
 should use compatible stable releases, then retain a lock for reproducibility.
@@ -46,9 +47,42 @@ timeouts, explicit offline status and update flags. It never upgrades an environ
 
 ## Implemented qualification boundary
 
-The packaging workflow builds wheel/sdist on Linux and Windows, inspects metadata
-and file boundaries, installs minimum/current-compatible dependencies, reports
-resolved versions, and runs `pip check`. It does not run project API contract
-scenarios, read-only filesystem assertions, a protocol session, or Windows path
-attack cases. Those functional checks remain pending explicit task authorization;
-a passing packaging job is not functional or platform qualification.
+The workflow builds wheel/sdist on Linux and Windows, inspects metadata and file
+boundaries, installs minimum/current-compatible dependencies, records resolved
+versions, and runs read-only text, bounds, worker and protocol contracts plus
+`pip check`. Tests use public library templates and clearly identified synthetic
+plan syntax. Separately acquired official model text can be exercised with
+`RAS_MCP_REAL_TEXT_FIXTURES`; no model data is redistributed by this package.
+
+Local Linux CPython3.11 qualification covered ras-commander0.103.0/MCP2.3.0 and
+the source candidate containing RasText. Published0.103.0 deliberately lacks
+RasText: metadata availability errors are tested, while candidate metadata tests
+run separately. SDK auto and legacy sessions both passed. These are text/API
+contract results, not engine, hydraulic, all-client or native Windows acceptance.
+
+Windows CI runs platform-independent contracts and handle-based reads; POSIX
+symlink cases are skipped there. Native Windows junction/UNC/race behavior needs
+separate explicit cases and retained evidence before claiming that qualification.
+
+## Local evidence, October 4, 2026
+
+On Linux CPython3.11 with MCP2.3.0 and published RAS Commander0.103.0:
+
+- Released API suite: 69 passed, 2 expected RasText-candidate skips, including an
+  optional live bounded PyPI check and locally acquired official example text.
+- Source candidate containing RasText: 70 passed, 1 optional live-network skip.
+- Installed MCP0.4 wheel, tested outside the checkout: 68 passed, 3 expected
+  skips (two unreleased RasText cases and optional live-network check).
+- Focused upstream pure RasText readers: 21 passed.
+- Wheel/sdist build, metadata/entry-point boundary inspection and `pip check` passed.
+
+The real fixture is official Muncie project/plan text from the HEC6.6 example
+archive. Its `.p01` records `Program Version=5.00`; archive label and source program
+version are different facts. Source hashes were retained privately; model inputs
+and descriptions were not redistributed. Queries read only the four explicitly
+named project/plan text files, never geometry or binary results.
+
+Retained logs/XML and exact dependency/artifact hashes are in the implementation
+packet. No engine/simulation/physical verification was performed. Native Windows
+cases remain unobserved locally; cross-platform CI results must be reviewed before
+expanding the platform claim.

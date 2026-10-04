@@ -14,7 +14,7 @@ PLAN_FIELDS = frozenset({
     "Plan Title", "Short Identifier", "Program Version", "Geom File", "Flow File",
     "Simulation Date", "Computation Interval", "Output Interval",
     "Instantaneous Interval", "Mapping Interval", "Run HTab", "Run UNet",
-    "Run UNET", "Run WQNET", "Run Sediment", "Run Post Process",
+    "Run UNET", "Run WQNET", "Run WQNet", "Run Sediment", "Run Post Process", "Run PostProcess",
     "Friction Slope Method", "UNET D1 Cores", "UNET D2 Cores", "PS Cores",
     "UNET 1D Methodology", "UNET D2 Solver Type", "Description",
 })
