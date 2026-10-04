@@ -106,7 +106,7 @@ os.open=descriptor_open
     assert audit_log.exists() and all(json.loads(line)["event"] == "open" for line in audit_log.read_text().splitlines())
 
 
-@pytest.mark.parametrize("narrative", ["水🙂é" * 2500, '\\"\t' * 2500])
+@pytest.mark.parametrize("narrative", ["水🙂é" * 2500, '\\"\t' * 2500], ids=["unicode", "json-escapes"])
 def test_actual_sdk_unicode_and_escaped_narrative_fallback(policy, project, narrative):
     (project / "unicode.p01").write_text("Plan Title=Unicode\nBEGIN DESCRIPTION:\n" + narrative + "\nEND DESCRIPTION:\n", encoding="utf-8")
     async def scenario():

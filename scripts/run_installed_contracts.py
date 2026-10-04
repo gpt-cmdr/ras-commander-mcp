@@ -16,9 +16,9 @@ def main():
         env = dict(os.environ)
         # No checkout/candidate on sys.path: subprocesses also exercise the wheel.
         env["PYTHONPATH"] = str(location)
-        result = subprocess.run([sys.executable, "-m", "pytest", "-q",
+        result = subprocess.run([sys.executable, "-m", "pytest", "-q", "--timeout=60",
                                  "--junitxml=" + str(root / "contract-results.xml")],
-                                cwd=location, env=env, check=False)
+                                cwd=location, env=env, check=False, timeout=600)
         raise SystemExit(result.returncode)
 
 

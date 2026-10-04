@@ -8,6 +8,7 @@ permissions:
   contents: read
 jobs:
   package:
+    timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
@@ -28,7 +29,7 @@ jobs:
       - name: Install built wheel and current compatible contracts
         shell: bash
         run: python -m pip install dist/*.whl
-      - run: python -m pip install pytest
+      - run: python -m pip install pytest pytest-timeout
       - name: Qualify released read-only text and protocol contracts
         run: python scripts/run_installed_contracts.py
       - run: python -m pip check

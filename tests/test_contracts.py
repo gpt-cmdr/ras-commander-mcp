@@ -80,7 +80,7 @@ def test_unrequested_upstream_output_rejected(policy, project, monkeypatch):
         RasAdapter(policy).metadata(MetadataRequest(root=str(project), file="hec_ras_70_template.prj", fields=["Proj Title"]), "project")
 
 
-@pytest.mark.parametrize("value", ["é水🙂" * 3000, '\\"\n\t' * 3000, "long narrative " * 1500])
+@pytest.mark.parametrize("value", ["é水🙂" * 3000, '\\"\n\t' * 3000, "long narrative " * 1500], ids=["unicode", "json-escapes", "long-ascii"])
 def test_narrative_bounds_unicode_json_and_truncation(policy, project, value):
     snap = policy.read(str(project), "representative.p01", "plan")
     q = request(project, max_characters=1600)
