@@ -13,9 +13,9 @@ bounded informational subagent.
 | Live documentation search/download | Passive documentation links or installed API discovery outside MCP |
 
 No project mutation or execution is introduced. On ras-commander 0.103.0, project
-units and plan descriptions work. The pure upstream `RasText` API must first be
-released for metadata/configuration tools; those tools return a clear availability
-error until then. Do not enable a copied-parser or initialized-project fallback.
+units and plan descriptions work, and metadata/configuration tools return a clear
+availability error. Those tools use the pure `RasText` API published in
+ras-commander 0.104.0. Do not enable a copied-parser or initialized-project fallback.
 
 Replace `HECRAS_VERSION`/`HECRAS_PATH` configuration with `RAS_MCP_ALLOWED_ROOTS`.
 No engine version or executable is required for these information queries.
