@@ -1,10 +1,25 @@
 # Compatibility and release maintenance
 
 Package version, domain-library version and MCP protocol revision are independent.
-The 0.4 candidate uses official MCP SDK >=2.3,<3 and ras-commander >=0.103,<1.
+Version 0.4 uses official MCP SDK >=2.3,<3 and ras-commander >=0.103,<1.
 These bounds are declared intent, not proof that every future minor works.
 
-## Release sequence
+## Published status
+
+ras-commander-mcp 0.4.0 and ras-commander 0.104.0, which publishes `RasText`, are
+on PyPI. With 0.104.0 or later, all tools are available; with 0.103.0, units and
+descriptions work and metadata/configuration tools report that `RasText` is
+unavailable. The published 0.4.0 wheel includes the Windows extended-length read
+change (PR #10).
+
+Corpus qualification of the release read 983 HEC-RAS text files with
+0 errors on Linux and on native Windows from a UNC project root. Before the
+extended-length change, all 69 corpus files whose Windows path reached 260
+characters failed with a generic read error; after it, all 69 passed. The PyPI
+packages reproduced the results obtained from source. No engine, simulation or
+hydraulic check was part of this qualification.
+
+## Release sequence (completed)
 
 1. Review and release upstream `RasText` in ras-commander. Its pure snapshot API
    owns project/plan parsing, requires no engine, and never resolves references.
