@@ -1,13 +1,16 @@
-site_name: RAS Commander MCP
+site_name: Agent Plugin and MCPs
 site_url: https://rascommander.info/mcp/
 repo_url: https://github.com/gpt-cmdr/ras-commander-mcp
 repo_name: gpt-cmdr/ras-commander-mcp
 theme:
   name: material
 nav:
-  - Home: index.md
-  - Installation: installation.md
-  - Tools: tools.md
-  - Architecture: architecture.md
-  - Migration: migration.md
-  - Compatibility: compatibility.md
+  - Overview: index.md
+  - Install and update: plugin.md
+  - RAS text MCP:
+      - Tools: tools.md
+      - Installation: installation.md
+      - Architecture: architecture.md
+      - Migration: migration.md
+      - Compatibility: compatibility.md
+  - HMS text MCP: hms.md

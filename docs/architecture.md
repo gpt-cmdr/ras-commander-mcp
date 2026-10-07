@@ -12,8 +12,9 @@ Traversal, absolute/drive paths, unsupported extensions and oversized inputs are
 rejected. On POSIX, descriptor-relative directory traversal rejects symlinks at
 all levels below the configured root and opens the final file with `O_NOFOLLOW`.
 On Windows, the opened handle's final path is checked before content is read, so
-junctions may resolve only within the configured root. Windows handling requires
-native qualification before release; it is not established by Linux checks.
+junctions may resolve only within the configured root. Reads use Windows
+extended-length paths, so files beyond 260 characters work. Native Windows
+qualification is recorded in [compatibility](compatibility.md).
 Only regular files are eligible. Reads are capped at 1 MiB plus a sentinel byte;
 NUL-containing input and files changing during read are rejected.
 

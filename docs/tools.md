@@ -1,4 +1,6 @@
-# Tools
+# RAS text MCP tools
+
+[ras-commander-mcp](https://github.com/gpt-cmdr/ras-commander-mcp) supplies bounded, read-only information from HEC-RAS project and plan text. The agent plugin runs it as the `ras-text` server and exposes it only to the `ras-commander:ras-text` subagent.
 
 | Tool | Selected information | Input |
 | --- | --- | --- |
