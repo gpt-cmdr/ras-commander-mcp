@@ -1,4 +1,4 @@
-# Installation
+# RAS text MCP installation
 
 Use Python 3.10+ in an authorized environment. Install the published package with
 `python -m pip install --upgrade ras-commander-mcp`, or let a uv-based client run
@@ -18,7 +18,7 @@ alone does not provide that restriction. Clients that cannot isolate those tools
 should use scoped public Python APIs instead. For Claude Code, the
 `ras-commander@ras-commander-plugin` plugin from
 [gpt-cmdr/ras-commander-plugin](https://github.com/gpt-cmdr/ras-commander-plugin)
-(forthcoming) provides the server, a plugin subagent and a `PreToolUse` guard.
+provides the server, a plugin subagent and a `PreToolUse` guard.
 
 The server speaks local stdio through the official MCP Python SDK v2. There is no
 HTTP server, authentication configuration, remote hosting, or model sampling.
