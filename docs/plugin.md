@@ -27,6 +27,37 @@ demonstrated on Codex. On Codex, project reads use the `ras-commander` and
 - Optional: enable Windows long paths, as described in the
   [overview](index.md#why-local-agents-on-windows).
 
+### Before the first task
+
+**Windows: put `claude` on `PATH`.** The Claude Code native installer
+(`irm https://claude.ai/install.ps1 | iex`) installs `claude.exe` to
+`%USERPROFILE%\.local\bin` but may not add that folder to `PATH`. If
+`claude --version` is not found, add the folder to your user `PATH` in
+PowerShell, then open a new terminal:
+
+```powershell
+[Environment]::SetEnvironmentVariable("Path", [Environment]::GetEnvironmentVariable("Path", "User") + ";$env:USERPROFILE\.local\bin", "User")
+```
+
+**HEC-RAS Terms and Conditions.** HEC-RAS shows its Terms and Conditions for
+Use once per Windows user and version. Until they are accepted, RAS Commander
+cannot run plans for that user; it detects this and says so. Open each
+installed HEC-RAS version once in the GUI as the Windows user who will run the
+agent and accept the terms. Reading project text, HDF results, and geometry
+does not need this step.
+
+**Python library for the agent.** The MCP servers need no Python setup. Tasks
+that read results, geometry, or GIS data use the `ras-commander` library in a
+Python environment the agent can run. Install the full feature set there:
+
+```sh
+uv venv
+uv pip install "ras-commander[full]"
+```
+
+The skills tell the agent to create such an environment if `ras-commander` is
+not importable. Installing it ahead of time avoids that step on the first task.
+
 ## Install
 
 Claude Code:
@@ -35,6 +66,12 @@ Claude Code:
 claude plugin marketplace add gpt-cmdr/ras-commander-plugin
 claude plugin install ras-commander@ras-commander-plugin
 ```
+
+The shell install prints `1 userConfig option not yet set — run /plugin
+configure … or pass --config KEY=VALUE.` This message is expected and you can
+ignore it. It refers to the optional `extra_roots` setting described under
+[Allowed project roots](#allowed-project-roots). Claude Code prints it for
+every unset option, including optional ones that have a default.
 
 Restart Claude Code after installing. Inside a session you can use
 `/plugin marketplace add gpt-cmdr/ras-commander-plugin` and
