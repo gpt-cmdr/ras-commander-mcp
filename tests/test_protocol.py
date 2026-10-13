@@ -127,3 +127,16 @@ def test_actual_sdk_unicode_and_escaped_narrative_fallback(policy, project, narr
         value = result.structured_content["records"][0]["value"]
         assert narrative.startswith(value)
     asyncio.run(scenario())
+
+
+def test_main_agents_are_told_to_delegate(policy):
+    """Hosts register MCP tools session-wide; the server and every tool say to delegate."""
+    async def scenario():
+        server = create_server(policy)
+        assert server.instructions.startswith("Subagent-only server: a main or coordinating agent must not call")
+        assert "ras-commander:ras-text" in server.instructions
+        for tool in await server.list_tools():
+            assert tool.description.startswith("Subagent-only: a main or coordinating agent must not call"), tool.name
+            assert "ras-commander:ras-text" in tool.description
+            assert len(tool.description) < 400
+    asyncio.run(scenario())
