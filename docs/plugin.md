@@ -166,6 +166,52 @@ uv cache clean hms-commander-mcp hms-commander
 
 Naming only the server updates the server but keeps the old library.
 
+**Agent Python environment.** Updating the plugin or its MCP servers does not
+upgrade an existing Python environment used for HDF extraction or mapping.
+After agreeing to upgrade the intended environment, activate it and run:
+
+```sh
+uv pip install --upgrade "ras-commander[full]>=0.110.2"
+```
+
+Keep a project's existing dependency pins unless its owner authorizes a change.
+The skills check installed versions and capabilities before using an API that
+may exist only on library `main`.
+
+## Release and maintenance notes, October 29, 2026
+
+[Plugin 0.1.2](https://github.com/gpt-cmdr/ras-commander-plugin/pull/5) includes
+the current canonical skills, full-dependency setup for ras-commander 0.110.2
+or newer, and Rust engine availability checks. A fresh Windows CPython 3.11
+installation of `ras-commander[full]==0.110.2` installed fast-hdf 0.2.4 and
+fast-map 0.10.1. RAS Commander and the HDF extension imported successfully,
+and dependency consistency checks passed. This establishes installation and
+import behavior; no model extraction or mapping run was part of that check.
+
+Both libraries now notify the marketplace on pushes to `main`. The
+[RAS-triggered rebuild](https://github.com/gpt-cmdr/ras-commander-plugin/actions/runs/40888556421)
+and [HMS-triggered rebuild](https://github.com/gpt-cmdr/ras-commander-plugin/actions/runs/40888557419)
+succeeded. Both found unchanged packaged content and correctly published no
+additional version. The weekly Monday check at 10:23 UTC is a recovery path,
+not a delay applied to push-triggered updates. GitHub may start scheduled jobs
+later than their configured time.
+
+The upstream generators now read UTF-8 and write LF explicitly and normalize
+Markdown line endings before rewriting links and frontmatter. The marketplace
+uses them directly; its local newline workaround has been removed. The MCP
+development lock, compatibility snapshot, and setup documentation were also
+[refreshed for 0.110.2](https://github.com/gpt-cmdr/ras-commander-mcp/pull/16).
+
+**Maintainer credential.** `PLUGIN_DISPATCH_TOKEN` is configured as an Actions
+secret in both `gpt-cmdr/ras-commander` and `gpt-cmdr/hms-commander`. The token
+is limited to `gpt-cmdr/ras-commander-plugin`, with Contents read/write and the
+required Metadata read access. It has no account permissions and expires
+**November 28, 2026**. Replace both secrets before expiry using the
+[marketplace renewal procedure](https://github.com/gpt-cmdr/ras-commander-plugin#dispatch-token-renewal).
+The weekly marketplace job continues independently if notifications fail.
+This credential targets the plugin repository; it does not configure the
+MCP compatibility workflow's separate `ras-commander-release` dispatch hook.
+
 ## Reporting problems and requesting features
 
 Each library includes a contributing skill that the plugin installs:
