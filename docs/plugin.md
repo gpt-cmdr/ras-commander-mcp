@@ -52,11 +52,22 @@ Python environment the agent can run. Install the full feature set there:
 
 ```sh
 uv venv
-uv pip install "ras-commander[full]"
+uv pip install "ras-commander[full]>=0.110.2"
 ```
 
-The skills tell the agent to create such an environment if `ras-commander` is
-not importable. Installing it ahead of time avoids that step on the first task.
+Plugin 0.1.1 and later include the `[full]` installation guidance; older plugin
+skills may omit it. Update the plugin before relying on that setup step. Agents
+create an environment when the library is unavailable; an existing shared or
+user-pinned environment needs an agreed upgrade. Installing the dependencies
+ahead of time avoids setup during the first task.
+
+Release 0.110.2 installs the Rust HDF engine, `ras-commander-fast-hdf`, as a base
+dependency on supported CPython platforms (Windows x64, Linux x64, macOS arm64).
+The `[full]` extra also installs the Rust mapping engine,
+`ras-commander-fast-map`, on Windows x64 and Linux x64. There is no macOS mapping
+wheel. These engines run through the Python APIs; the text MCP servers do not
+perform HDF extraction or mapping. Check the installed engine distributions and
+library capabilities before starting a task that requires them.
 
 ## Install
 
@@ -120,7 +131,11 @@ command to run. The check runs in the background at most once a day, never
 blocks the session, and never installs anything. If it fails, for example
 offline, nothing is shown.
 
-**Plugin.** Update the skills, subagents, and hooks, then restart Claude Code:
+**Plugin.** To receive updates automatically, run `/plugin`, open **Marketplaces**,
+select `ras-commander-plugin`, and choose **Enable auto-update**. Third-party
+marketplaces require this setting; publication alone does not update every
+installation. To update the skills, subagents, and hooks by hand, then restart
+Claude Code:
 
 ```sh
 claude plugin marketplace update ras-commander-plugin
@@ -129,6 +144,14 @@ claude plugin update ras-commander@ras-commander-plugin
 
 On Codex, run `codex plugin marketplace upgrade ras-commander-plugin`, then
 `codex plugin add ras-commander@ras-commander-plugin`, and start a new session.
+
+The marketplace tracks the libraries' `main` branches. Upstream push notifications
+trigger a rebuild; a weekly Monday check at 10:23 UTC recovers missed
+notifications. The job validates the generated content before publishing a patch,
+and unchanged skills/resources produce no release. Python environments use
+compatible stable PyPI releases, starting with 0.110.2 for new RAS environments.
+Because `main` can describe unreleased APIs, agents inspect the installed version,
+signatures and schemas and report capability gaps before using them.
 
 **MCP servers.** The plugin launches the servers with `uvx`, which reuses its
 cached copy. Once uv's PyPI index cache is more than 10 minutes old, the next
