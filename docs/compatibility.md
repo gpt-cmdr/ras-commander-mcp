@@ -6,8 +6,8 @@ These bounds are declared intent, not proof that every future minor works.
 
 ## Published status
 
-ras-commander-mcp 0.4.0 and ras-commander 0.104.0, which publishes `RasText`, are
-on PyPI. With 0.104.0 or later, all tools are available; with 0.103.0, units and
+ras-commander-mcp 0.4.0 and ras-commander 0.110.2 are on PyPI. `RasText` was
+published in 0.104.0. With 0.104.0 or later, all tools are available; with 0.103.0, units and
 descriptions work and metadata/configuration tools report that `RasText` is
 unavailable. The published 0.4.0 wheel includes the Windows extended-length read
 change (PR #10).
@@ -18,6 +18,20 @@ extended-length change, all 69 corpus files whose Windows path reached 260
 characters failed with a generic read error; after it, all 69 passed. The PyPI
 packages reproduced the results obtained from source. No engine, simulation or
 hydraulic check was part of this qualification.
+
+## Dependency refresh, October 29, 2026
+
+The development lock and PyPI compatibility snapshot now record ras-commander
+0.110.2. Native Windows CPython 3.11 checks with MCP SDK 2.3.0 and
+ras-commander-fast-hdf 0.2.4 passed: 73 tests, with four expected skips
+(separately acquired official model text, two POSIX descriptor cases, and the
+optional live PyPI check). Wheel/sdist metadata and package-boundary inspection,
+builds, and dependency consistency checks passed. This refresh changes no
+published dependency bounds and performs no engine or hydraulic qualification.
+
+The text MCP server does not need fast-map. Agent tasks that use Rust mapping
+install the library's `[full]` extra on a supported platform; see
+[plugin setup](plugin.md#before-the-first-task).
 
 ## Release sequence (completed)
 
