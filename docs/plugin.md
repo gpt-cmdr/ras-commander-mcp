@@ -145,13 +145,30 @@ claude plugin update ras-commander@ras-commander-plugin
 On Codex, run `codex plugin marketplace upgrade ras-commander-plugin`, then
 `codex plugin add ras-commander@ras-commander-plugin`, and start a new session.
 
-The marketplace tracks the libraries' `main` branches. Upstream push notifications
-trigger a rebuild; a weekly Monday check at 10:23 UTC recovers missed
-notifications. The job validates the generated content before publishing a patch,
-and unchanged skills/resources produce no release. Python environments use
-compatible stable PyPI releases, starting with 0.110.2 for new RAS environments.
-Because `main` can describe unreleased APIs, agents inspect the installed version,
-signatures and schemas and report capability gaps before using them.
+The marketplace provides two update channels:
+
+| Channel | Marketplace branch | Packaged skill sources |
+| --- | --- | --- |
+| `release` (default) | `main` | Latest published stable library release tags |
+| `latest` | `latest` | The libraries' `main` branches |
+
+Release publication notifications update the release channel. Push notifications
+update `latest`; a weekly Monday check at 10:23 UTC recovers missed notifications
+for both channels. Runtime or packaged content changes produce a new plugin cache
+version; source provenance changes alone do not. The job validates each bundle
+before publishing it.
+
+Select the channel through the marketplace source ref. Existing Claude Code
+installations must first change the matching marketplace declaration in settings;
+Codex requires removing and re-adding the marketplace registration. Follow the
+[channel switching instructions](https://github.com/gpt-cmdr/ras-commander-plugin#update-channels)
+and restart the host. Both channels retain the same plugin name.
+
+Channels select plugin instructions. The text MCP launchers still use published
+PyPI packages, and project Python environment pins are preserved. New RAS
+environments start with compatible stable PyPI releases at 0.110.2 or newer.
+Because `latest` can describe unreleased APIs, agents inspect the installed
+version, signatures and schemas and report capability gaps before using them.
 
 **MCP servers.** The plugin launches the servers with `uvx`, which reuses its
 cached copy. Once uv's PyPI index cache is more than 10 minutes old, the next
@@ -179,6 +196,13 @@ The skills check installed versions and capabilities before using an API that
 may exist only on library `main`.
 
 ## Release and maintenance notes, October 29, 2026
+
+[Plugin 0.2.0](https://github.com/gpt-cmdr/ras-commander-plugin/pull/7) makes
+`release` the default and adds the opt-in `latest` channel. Release bundles omit
+optional contribution skills absent from the published library tag. The HMS
+0.4.0 source predates the generator fixes, so its release bundle uses a separately
+pinned canonical generator; provenance records both source and builder commits.
+No unreleased skill text is borrowed for that release bundle.
 
 [Plugin 0.1.2](https://github.com/gpt-cmdr/ras-commander-plugin/pull/5) includes
 the current canonical skills, full-dependency setup for ras-commander 0.110.2
