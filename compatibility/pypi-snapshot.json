@@ -1,13 +1,16 @@
 {
-  "observed_at": "2026-10-29T13:48:19.524832+00:00",
+  "observed_at": "2026-11-02T18:30:12.596351+00:00",
   "packages": {
     "ras-commander": {
-      "version": "0.110.2",
+      "version": "0.113.0",
       "requires_python": ">=3.10",
       "requires_dist": [
         "Pillow>=9.0; extra == \"all\"",
         "Pillow>=9.0; extra == \"gui\"",
         "affine; extra == \"dss-native\"",
+        "affine>=3; extra == \"all\"",
+        "affine>=3; extra == \"fim\"",
+        "affine>=3; extra == \"full\"",
         "aiohttp; extra == \"all\"",
         "aiohttp; extra == \"notebooks\"",
         "cfgrib>=0.9.10; extra == \"all\"",
@@ -17,9 +20,9 @@
         "cfgrib>=0.9.10; extra == \"precip\"",
         "comtypes>=1.4.0; sys_platform == \"win32\" and extra == \"all\"",
         "comtypes>=1.4.0; sys_platform == \"win32\" and extra == \"gui\"",
-        "dataretrieval>=1.0; extra == \"all\"",
-        "dataretrieval>=1.0; extra == \"notebooks\"",
-        "dataretrieval>=1.0; extra == \"usgs\"",
+        "dataretrieval>=1.4; extra == \"all\"",
+        "dataretrieval>=1.4; extra == \"notebooks\"",
+        "dataretrieval>=1.4; extra == \"usgs\"",
         "docker>=6.0; extra == \"all\"",
         "docker>=6.0; extra == \"remote-all\"",
         "docker>=6.0; extra == \"remote-docker\"",
@@ -73,13 +76,13 @@
         "pywin32>=227; sys_platform == \"win32\" and extra == \"compute\"",
         "pywin32>=227; sys_platform == \"win32\" and extra == \"execution\"",
         "pywin32>=227; sys_platform == \"win32\" and extra == \"full\"",
-        "ras-commander-fast-hdf<0.3,>=0.2.3; extra == \"fast\"",
-        "ras-commander-fast-hdf<0.3,>=0.2.3; extra == \"fast-hdf\"",
-        "ras-commander-fast-hdf<0.3,>=0.2.3; platform_python_implementation == \"CPython\" and ((platform_system == \"Windows\" and platform_machine == \"AMD64\") or (platform_system == \"Linux\" and platform_machine == \"x86_64\") or (platform_system == \"Darwin\" and platform_machine == \"arm64\"))",
-        "ras-commander-fast-map<0.11,>=0.8; ((platform_system == \"Windows\" and platform_machine == \"AMD64\") or (platform_system == \"Linux\" and platform_machine == \"x86_64\")) and extra == \"all\"",
-        "ras-commander-fast-map<0.11,>=0.8; ((platform_system == \"Windows\" and platform_machine == \"AMD64\") or (platform_system == \"Linux\" and platform_machine == \"x86_64\")) and extra == \"fast-map\"",
-        "ras-commander-fast-map<0.11,>=0.8; ((platform_system == \"Windows\" and platform_machine == \"AMD64\") or (platform_system == \"Linux\" and platform_machine == \"x86_64\")) and extra == \"fim\"",
-        "ras-commander-fast-map<0.11,>=0.8; ((platform_system == \"Windows\" and platform_machine == \"AMD64\") or (platform_system == \"Linux\" and platform_machine == \"x86_64\")) and extra == \"full\"",
+        "ras-commander-fast-hdf<0.4,>=0.3.0; extra == \"fast\"",
+        "ras-commander-fast-hdf<0.4,>=0.3.0; extra == \"fast-hdf\"",
+        "ras-commander-fast-hdf<0.4,>=0.3.0; platform_python_implementation == \"CPython\" and ((platform_system == \"Windows\" and platform_machine == \"AMD64\") or (platform_system == \"Linux\" and platform_machine == \"x86_64\") or (platform_system == \"Darwin\" and platform_machine == \"arm64\"))",
+        "ras-commander-fast-map<0.13,>=0.12.0; ((platform_system == \"Windows\" and platform_machine == \"AMD64\") or (platform_system == \"Linux\" and platform_machine == \"x86_64\")) and extra == \"all\"",
+        "ras-commander-fast-map<0.13,>=0.12.0; ((platform_system == \"Windows\" and platform_machine == \"AMD64\") or (platform_system == \"Linux\" and platform_machine == \"x86_64\")) and extra == \"fast-map\"",
+        "ras-commander-fast-map<0.13,>=0.12.0; ((platform_system == \"Windows\" and platform_machine == \"AMD64\") or (platform_system == \"Linux\" and platform_machine == \"x86_64\")) and extra == \"fim\"",
+        "ras-commander-fast-map<0.13,>=0.12.0; ((platform_system == \"Windows\" and platform_machine == \"AMD64\") or (platform_system == \"Linux\" and platform_machine == \"x86_64\")) and extra == \"full\"",
         "rasterio; extra == \"all\"",
         "rasterio; extra == \"all\"",
         "rasterio; extra == \"fim\"",
@@ -119,16 +122,16 @@
       ],
       "artifacts": [
         {
-          "filename": "ras_commander-0.110.2-py3-none-any.whl",
-          "sha256": "bf62baba047843d18b8b5c60aa36d49d2ea4c58d8c3e761bb6aa82812b136527",
-          "url": "https://files.pythonhosted.org/packages/84/56/7eba159da1c3a0bf6958cbfa9119623a4578768700ff1a5b0185f1ca5284/ras_commander-0.110.2-py3-none-any.whl",
-          "upload_time": "2026-10-28T17:04:38.331281Z"
+          "filename": "ras_commander-0.113.0-py3-none-any.whl",
+          "sha256": "f587c3a3ecf715457e11eb2a798de807f4572c91dd52c895b5a69dcd2c09a96d",
+          "url": "https://files.pythonhosted.org/packages/75/cf/7573c1ec6664224133f0ecadbcd5bd9d6868205d7639784653bb90a8371f/ras_commander-0.113.0-py3-none-any.whl",
+          "upload_time": "2026-10-31T18:35:31.508188Z"
         },
         {
-          "filename": "ras_commander-0.110.2.tar.gz",
-          "sha256": "77e4e7e75f630f28ee00a65bb3dab2415e84c88ed4ef5860cd6f99fea7402ec4",
-          "url": "https://files.pythonhosted.org/packages/47/3e/2c4a96f70b4272970ede8fc98ed7496cedea822a6863743a39a420c08ca0/ras_commander-0.110.2.tar.gz",
-          "upload_time": "2026-10-28T17:04:40.539449Z"
+          "filename": "ras_commander-0.113.0.tar.gz",
+          "sha256": "a2cdbc05261875912fd5aca941379bc2354d02fc1fc3eb55f9734cd53bd10168",
+          "url": "https://files.pythonhosted.org/packages/c5/c2/73b95e93aeacbab5e9dbb3ed7426df0908639118017f0b5f85b10b979ca1/ras_commander-0.113.0.tar.gz",
+          "upload_time": "2026-10-31T18:35:34.580445Z"
         }
       ]
     },
